@@ -184,7 +184,7 @@ export OORT_SECRET_KEY="your_secret_key"
 #### 1. Token Security Detection
 
 ```python
-from spoon_ai.tools.gopluslabs.token_security import get_token_risk_and_security_data
+from spoon_toolkits.gopluslabs.token_security import get_token_risk_and_security_data
 
 # Detect Ethereum token security
 result = await get_token_risk_and_security_data(
@@ -196,7 +196,7 @@ result = await get_token_risk_and_security_data(
 #### 2. Get Token Price
 
 ```python
-from spoon_ai.tools.crypto.price_data import GetTokenPriceTool
+from spoon_toolkits.crypto.price_data import GetTokenPriceTool
 
 tool = GetTokenPriceTool()
 result = await tool.execute(symbol="ETH-USDC", exchange="uniswap")
@@ -205,7 +205,7 @@ result = await tool.execute(symbol="ETH-USDC", exchange="uniswap")
 #### 3. Neo Blockchain Query
 
 ```python
-from spoon_ai.tools.neo.tool_collection import getAddressInfoByAddress
+from spoon_toolkits.neo.tool_collection import getAddressInfoByAddress
 
 # Query Neo address information
 address_info = getAddressInfoByAddress("NiEtVMWVYgpXrWkRTMwRaMJtJ41gD3912N")
@@ -214,7 +214,7 @@ address_info = getAddressInfoByAddress("NiEtVMWVYgpXrWkRTMwRaMJtJ41gD3912N")
 #### 4. Decentralized Storage
 
 ```python
-from spoon_ai.tools.storage.aioz.aioz_tools import AiozStorageTool
+from spoon_toolkits.storage.aioz.aioz_tools import AiozStorageTool
 
 tool = AiozStorageTool()
 result = await tool.upload_file(bucket_name="my-bucket", file_path="./file.txt")
