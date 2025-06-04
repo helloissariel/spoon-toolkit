@@ -1,3 +1,4 @@
+import asyncio
 from fastmcp import FastMCP
 import os
 from spoon_ai.tools.autonomys_auto_drive.mime_type import suffix_to_mime_type_dict
@@ -45,14 +46,27 @@ async def upload_file(file_and_path: str) -> dict:
             file_chunk = f.read(chunk_size_bytes)
             if not file_chunk:
                 break
+            # formdata = {
+            #     'file': file_chunk,
+            #     'index': str(index)
+            # }
+            # r = await autonomys_auto_drive_client.post(
+            #     f'/uploads/file/{upload_id}/chunk',# headers={'Content-Type': 'multipart/form-data'},
+            #     data=formdata
+            # )
+            files = {'file': ('blob', file_chunk, 'application/octet-stream')}
+            data = {'index': str(index)}
             r = await autonomys_auto_drive_client.post(
-                f'/uploads/file/{upload_id}/chunk', headers={'Content-Type': 'multipart/form-data'},
-                content=f"index={index}&file=".encode('utf-8') + file_chunk
+                f'/uploads/file/{upload_id}/chunk',
+                files=files, data=data
             )
             # index += chunk_size_bytes  # this is wrong
             index += 1
     r = await autonomys_auto_drive_client.post(
-        f'/uploads/file/{upload_id}/complete', headers={'Content-Type': 'application/json'},
+        f'/uploads/{upload_id}/complete', headers={'Content-Type': 'application/json', 'Accept': 'application/json'},
     )
     r = r.json()
     return r
+
+def test_upload_file():
+    asyncio.run(upload_file('__init__.py'))

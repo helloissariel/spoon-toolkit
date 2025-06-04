@@ -8,7 +8,7 @@ async def raise_on_4xx_5xx(response):
 
 autonomys_auto_drive_client = httpx.AsyncClient(
     base_url='https://mainnet.auto-drive.autonomys.xyz/api'.removesuffix('/'),
-    headers={'Authorization': AUTONOMYS_AUTO_DRIVE_API_KEY,
+    headers={'Authorization': f"Bearer {AUTONOMYS_AUTO_DRIVE_API_KEY}",
              'X-Auth-Provider': AUTONOMYS_AUTO_DRIVE_AUTH_PROVIDER},
     event_hooks={'response': [raise_on_4xx_5xx]},
 )
