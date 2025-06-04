@@ -1,11 +1,9 @@
 from fastmcp import FastMCP
-from spoon_ai.tools.gopluslabs.cache import time_cache
 from spoon_ai.tools.autonomys_auto_drive.http_client import autonomys_auto_drive_client
 
 mcp = FastMCP("AutonomysAutoDriveSubscriptions")
 
 @mcp.tool()
-@time_cache()
 async def get_subscriptions() -> dict:
     """
     Get current user subscription information.
