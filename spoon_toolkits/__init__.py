@@ -26,7 +26,7 @@ from .fluence.fluence_tools import (
     SearchFluenceMarketplaceOffers
 )
 
-from .third_web import (
+from .third_web.third_web_tools import (
     GetContractEventsFromThirdwebInsight,
     GetMultichainTransfersFromThirdwebInsight,
     GetTransactionsTool,
