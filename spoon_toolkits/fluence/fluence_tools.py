@@ -428,7 +428,7 @@ class FluenceEstimateVMTool(BaseTool):
                                         "type": "array",
                                         "description": "List of ISO country codes for preferred datacenters",
                                         "items": {"type": "string"},
-                                        "example": ["FR", "DE", "LT"]
+                                        "example": ["BE", "PL", "US"]
                                     }
                                 },
                                 "required": ["countries"]
@@ -498,7 +498,7 @@ class FluenceEstimateVMTool(BaseTool):
                             "maxTotalPricePerEpochUsd": {
                                 "type": "string",
                                 "description": "Maximum total price allowed per epoch in USD",
-                                "example": "12.57426"
+                                "maxTotalPricePerEpochUsd": "12.57426"
                             }
                         },
                         "required": ["additionalResources", "basicConfiguration", "datacenter", "hardware",
@@ -724,15 +724,9 @@ async def test_create_and_delete_ssh_key():
     api_key = os.getenv("FLUENCE_API_KEY")
     print(f"api_key: {api_key}")
     key_name: str = "test-key"
-    public_key = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC9QHHp9UvEzoVAlxlgiaBuSvzHunok4fxiBgVGYZBfMKcOuiVsGLsDt+zYRfs0magpxglrlyQxw31+Dssr85G3VYQ5KOlcOrseSGLrUQxGRC1faV2UG5fcV5j9HmyWWWxqXb49xBtzcVHCgnV0kjsCirbyjNxGa/AX+aQR53pmGdej27WGsa+qb8ITCLNKRqo/0A9je79juEgGnYsSL7H40ZT/z/sCwhz0fpJU3Hin7/pD/OWq/Ep0u5RaVeEF9FC219NNjSDLkEyulXjkwM+SChvw3096P67Np2GeEZw3AbtZfASE95UYlNf67dazPcZAjkXIvMr52ZlihrzI5ut5dQDOua1MH8l3bMdBdHF9/xYILf8lVrlCt3c5PocLFfy0iSvAUlHY9Ve6QvXbNkXQE3+70e4sN+CO/PwK6AesB6eUxMl2I3B6IR3cAmvygXZffNdbIGu1//2B2vmG+INA53eu4ItOYjsVYIa9+lQvoRuQCSWm7CMDF54j7JZIOpxV6B1CNRqLgsOT9wp0FLH/R17SNyKZvbuOO21E0rcoLJGaPANTeYzd2TKobbS1ZZyeGKAN2fx/I6JLBb6WEnAh7OilU4hk2E3o+1VRRxZlVo2R0ViCoxhtLHiiupRTRCYMqqFqm0zC9+kRX3tB9Nd7d+gv06qVHGDdqsJEAL0haw== 1534632920@163.com"
+    public_key = "ssh-rsa AAAAB3Nza......w=="
     create_result = await create_tool.execute(api_key=api_key, name=key_name, public_key=public_key)
     print("🧪 Create SSH Key:", create_result)
-    # if isinstance(create_result, dict):
-    #     # fingerprint = "SHA256:sINcLA/hlKG0nDpE9n233xEnXAgSISxq0/nVWbbx5A4"
-    #     fingerprint = create_result.get("fingerprint", "")
-    #     delete_tool = FluenceDeleteSSHKeyTool()
-    #     delete_result = await delete_tool.execute(api_key=api_key, fingerprint=fingerprint)
-    #     print("🧪 Delete SSH Key:", delete_result)
 
 
 async def test_list_vms():
@@ -742,103 +736,58 @@ async def test_list_vms():
     print("🧪 List VMs:", result)
 
 
-async def test_create_and_patch_and_delete_vm():
+async def test_create_vm():
+    tool = FluenceCreateVMTool()
+
     api_key = os.getenv("FLUENCE_API_KEY")
+
     vm_config = {
-        "constraints": {
-            "additionalResources": {
-                "storage": [
-                    {
-                        "supply": 20,
-                        "type": "NVMe",
-                        "units": "GiB"
-                    }
-                ]
-            },
-            "basicConfiguration": "cpu-4-ram-8gb-storage-25gb",
-            # "datacenter": {
-            #     "countries": [
-            #         "DE",
-            #         "LT",
-            #         "FR"
-            #     ]
-            # },
-            # "hardware": {
-            #     "cpu": [
-            #         {
-            #             "architecture": "Zen",
-            #             "manufacturer": "AMD"
-            #         }
-            #     ],
-            #     "memory": [
-            #         {
-            #             "generation": "4",
-            #             "type": "DDR"
-            #         }
-            #     ],
-            #     "storage": [
-            #         {
-            #             "type": "NVMe"
-            #         }
-            #     ]
-            # },
-            "maxTotalPricePerEpochUsd": "12.57426"
-        },
         "instances": 1,
+        "constraints": {
+            "basicConfiguration": "cpu-2-ram-4gb-storage-25gb",
+            "maxTotalPricePerEpochUsd": "1"
+        },
         "vmConfiguration": {
-            "hostname": "custom-hostname-or-null",
-            "name": "my-vm",
-            "openPorts": [
-                {
-                    "port": 5050,
-                    "protocol": "udp"
-                },
-                {
-                    "port": 5050,
-                    "protocol": "tcp"
-                },
-                {
-                    "port": 80,
-                    "protocol": "tcp"
-                }
-            ],
+            "name": "test-vm",
+            "hostname": None,
             "osImage": "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img",
-            "sshKeys": [
-                "test-key"
-            ]
+            "openPorts": [{"port": 22, "protocol": "tcp"}],
+            "sshKeys": ["testing-key"]
         }
     }
-    # create_tool = FluenceCreateVMTool()
-    # result = await create_tool.execute(
-    #     api_key=api_key,
-    #     vm_config=vm_config
-    # )
-    # print("🧪 Create VM:", result)
 
-    patch_tool = FluencePatchVMTool()
-    vm_patch_data = {
+    result = await tool.execute(api_key=api_key, vm_config=vm_config)
+    print(result)
+
+
+async def test_delete_vm():
+
+    api_key = os.getenv("FLUENCE_API_KEY")
+    vm_ids = ["xxx"]  
+    tool = FluenceDeleteVMTool()
+    result = await tool.execute(api_key=api_key, vm_ids=vm_ids)
+    print("🧪 Delete VM:", result)
+
+
+async def test_patch_vm():
+    api_key = os.getenv("FLUENCE_API_KEY")
+    tool = FluencePatchVMTool()
+
+    patch_data = {
         "updates": [
             {
-                "id": "0xab8904e72a5134035ff744727530443eb6534652",
+                "id": "0x4c5305d9EE657047F93B523eBfb617E6ADb6BB43",  # 替换成你的 VM ID
+                "vmName": "moon-vm-name",
                 "openPorts": [
-                    {
-                        "port": 1,
-                        "protocol": "tcp"
-                    }
-                ],
-                "vmName": "my-vm"
+                    {"port": 22, "protocol": "tcp"},
+                    {"port": 443, "protocol": "tcp"}
+                ]
             }
         ]
     }
-    patch_result = await patch_tool.execute(api_key=api_key, patch_data=vm_patch_data)
-    print("🧪 Patch VM:", patch_result)
-    delete_vm_ids = [
-        "0xab8904e72a5134035ff744727530443eb6534652"
-    ]
-    delete_tool = FluenceDeleteVMTool()
-    delete_result = await delete_tool.execute(api_key=api_key, vm_ids=delete_vm_ids)
-    print("🧪 Delete VM:", delete_result)
 
+    result = await tool.execute(api_key=api_key, patch_data=patch_data)
+    print("🧪 Patch VM Result:", result)
 
 async def test_list_default_images():
     api_key = os.getenv("FLUENCE_API_KEY")
@@ -853,45 +802,47 @@ async def test_vm_cost_estimation():
     estimation = {
         "constraints": {
             "additionalResources": {
-                "storage": [
-                    {
-                        "supply": 20,
-                        "type": "NVMe",
-                        "units": "GiB"
-                    }
-                ]
+            "storage": [
+                {
+                "supply": 20,
+                "type": "NVMe",
+                "units": "GiB"
+                }
+            ]
             },
             "basicConfiguration": "cpu-4-ram-8gb-storage-25gb",
             "datacenter": {
-                "countries": [
-                    "FR",
-                    "DE",
-                    "LT"
-                ]
+            "countries": [
+                "US",
+                "BE",
+                "PL"
+            ]
             },
             "hardware": {
-                "cpu": [
-                    {
-                        "architecture": "Zen",
-                        "manufacturer": "AMD"
-                    }
-                ],
-                "memory": [
-                    {
-                        "generation": "4",
-                        "type": "DDR"
-                    }
-                ],
-                "storage": [
-                    {
-                        "type": "NVMe"
-                    }
-                ]
+            "cpu": [
+                {
+                "architecture": "Zen",
+                "manufacturer": "AMD"
+                }
+            ],
+            "memory": [
+                {
+                "generation": "4",
+                "type": "DDR"
+                }
+            ],
+            "storage": [
+                {
+                "type": "NVMe"
+                }
+            ]
             },
             "maxTotalPricePerEpochUsd": "12.57426"
         },
         "instances": 1
-    }
+        }
+
+
     result = await tool.execute(api_key=api_key, constraints_spec=estimation)
     print("🧪 Estimate VM Cost:", result)
 
@@ -921,43 +872,36 @@ async def test_marketplace_post_offers():
     api_key = os.getenv("FLUENCE_API_KEY")
     tool = SearchFluenceMarketplaceOffers()
     constraints = {
-        "additionalResources": {
-            "storage": [
-                {
-                    "supply": 20,
-                    "type": "NVMe",
-                    "units": "GiB"
-                }
-            ]
-        },
-        "basicConfiguration": "cpu-4-ram-8gb-storage-25gb",
-        "datacenter": {
-            "countries": [
-                "FR",
-                "DE",
-                "LT"
-            ]
-        },
-        "hardware": {
-            "cpu": [
-                {
-                    "architecture": "Zen",
-                    "manufacturer": "AMD"
-                }
-            ],
-            "memory": [
-                {
-                    "generation": "4",
-                    "type": "DDR"
-                }
-            ],
-            "storage": [
-                {
-                    "type": "NVMe"
-                }
-            ]
-        },
-        "maxTotalPricePerEpochUsd": "12.57426"
+    "additionalResources": {
+        "storage": [
+        {
+            "supply": 20,
+            "type": "NVMe",
+            "units": "GiB"
+        }
+        ]
+    },
+    "basicConfiguration": "cpu-4-ram-8gb-storage-25gb",
+    "hardware": {
+        "cpu": [
+        {
+            "architecture": "Zen",
+            "manufacturer": "AMD"
+        }
+        ],
+        "memory": [
+        {
+            "generation": "4",
+            "type": "DDR"
+        }
+        ],
+        "storage": [
+        {
+            "type": "NVMe"
+        }
+        ]
+    },
+    "maxTotalPricePerEpochUsd": "500"
     }
     result = await tool.execute(api_key=api_key, constraints=constraints)
     print("🧪 Offers:", result)
@@ -966,20 +910,22 @@ async def test_marketplace_post_offers():
 if __name__ == '__main__':
     async def run_all_tests():
         # ssh key test
-        await test_list_ssh_keys()
+        # await test_list_ssh_keys()
         # await test_create_and_delete_ssh_key()
-        #
+        
         # vm test
         # await test_list_vms()
-        # await test_create_and_patch_and_delete_vm()
+        # await test_create_vm()
         # await test_list_default_images()
+        await test_patch_vm()
         # await test_vm_cost_estimation()
         #
         # # marketplace test
         # await test_marketplace_configs()
         # await test_marketplace_countries()
         # await test_marketplace_hardware()
-        await test_marketplace_post_offers()
+        # await test_marketplace_post_offers()
+        
 
 
     asyncio.run(run_all_tests())
