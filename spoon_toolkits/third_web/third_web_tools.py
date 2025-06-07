@@ -80,7 +80,7 @@ class GetMultichainTransfersFromThirdwebInsight(BaseTool):
             url = f"https://insight.thirdweb.com/v1/events?{chain_params}&limit={limit}"
             headers = {"x-client-id": client_id}
 
-            response = requests.get(url, headers=headers, timeout=50)
+            response = requests.get(url, headers=headers, timeout=100)
             response.raise_for_status()
             return response.json()
         except Exception as e:
@@ -116,7 +116,7 @@ class GetTransactionsTool(BaseTool):
             url = f"https://insight.thirdweb.com/v1/transactions?{chain_params}&limit={limit}"
             headers = {"x-client-id": client_id}
 
-            response = requests.get(url, headers=headers, timeout=50)
+            response = requests.get(url, headers=headers, timeout=100)
             response.raise_for_status()
             return response.json()
         except Exception as e:
@@ -154,7 +154,7 @@ class GetContractTransactionsTool(BaseTool):
             url = f"https://insight.thirdweb.com/v1/transactions/{contract_address}?chain={chain}&limit={limit}"
             headers = {"x-client-id": client_id}
 
-            response = requests.get(url, headers=headers, timeout=50)
+            response = requests.get(url, headers=headers, timeout=100)
             response.raise_for_status()
             return response.json()
         except Exception as e:
@@ -196,7 +196,7 @@ class GetContractTransactionsBySignatureTool(BaseTool):
             url = f"https://insight.thirdweb.com/v1/transactions/{contract_address}/{signature}?chain={chain}&limit={limit}"
             headers = {"x-client-id": client_id}
 
-            response = requests.get(url, headers=headers, timeout=50)
+            response = requests.get(url, headers=headers, timeout=100)
             response.raise_for_status()
             return response.json()
         except Exception as e:
@@ -301,7 +301,7 @@ class GetWalletTransactionsFromThirdwebInsight(BaseTool):
             params.append(("sort_by", sort_by))
             params.append(("sort_order", sort_order))
 
-            response = requests.get(base_url, headers=headers, params=params, timeout=50)
+            response = requests.get(base_url, headers=headers, params=params, timeout=100)
             response.raise_for_status()
             data = response.json()
             return f"✅ Success. Retrieved {len(data.get('data', []))} transactions.\n{data}"
