@@ -3,7 +3,7 @@ import os
 
 import requests
 import traceback
-
+import json
 from spoon_ai.tools import BaseTool
 
 
@@ -364,173 +364,281 @@ class FluenceListDefaultImagesTool(BaseTool):
             return f"❌ Error: {e}"
 
 
+# class FluenceEstimateVMTool(BaseTool):
+#     name: str = "estimate_fluence_vm"
+#     description: str = "Estimate cost for deploying one or more VMs with specified constraints and instance count."
+
+#     parameters: dict = {
+#         "type": "object",
+#         "properties": {
+#             "api_key": {
+#                 "type": "string",
+#                 "description": "Your Fluence API key for authentication"
+#             },
+#             "constraints_spec": {
+#                 "type": "object",
+#                 "description": "Specification of constraints and instance count for VM cost estimation",
+#                 "properties": {
+#                     "constraints": {
+#                         "type": "object",
+#                         "description": "Constraints defining VM hardware requirements, datacenter preferences, resource limits, and pricing caps",
+#                         "properties": {
+#                             "additionalResources": {
+#                                 "type": "object",
+#                                 "description": "Additional resource requirements beyond basic hardware",
+#                                 "properties": {
+#                                     "storage": {
+#                                         "type": "array",
+#                                         "description": "List of additional storage requirements",
+#                                         "items": {
+#                                             "type": "object",
+#                                             "properties": {
+#                                                 "supply": {
+#                                                     "type": "integer",
+#                                                     "description": "Amount of storage requested",
+#                                                     "example": 20
+#                                                 },
+#                                                 "type": {
+#                                                     "type": "string",
+#                                                     "description": "Type of storage device (e.g. NVMe)",
+#                                                     "example": "NVMe"
+#                                                 },
+#                                                 "units": {
+#                                                     "type": "string",
+#                                                     "description": "Units of storage supply (e.g. GiB)",
+#                                                     "example": "GiB"
+#                                                 }
+#                                             },
+#                                             "required": ["supply", "type", "units"]
+#                                         }
+#                                     }
+#                                 },
+#                                 "required": ["storage"]
+#                             },
+#                             "basicConfiguration": {
+#                                 "type": "string",
+#                                 "description": "Predefined basic VM configuration string indicating CPU, RAM, and storage size",
+#                                 "example": "cpu-4-ram-8gb-storage-25gb"
+#                             },
+#                             "datacenter": {
+#                                 "type": "object",
+#                                 "description": "Preferred datacenter locations by country codes",
+#                                 "properties": {
+#                                     "countries": {
+#                                         "type": "array",
+#                                         "description": "List of ISO country codes for preferred datacenters",
+#                                         "items": {"type": "string"},
+#                                         "example": ["BE", "PL", "US"]
+#                                     }
+#                                 },
+#                                 "required": ["countries"]
+#                             },
+#                             "hardware": {
+#                                 "type": "object",
+#                                 "description": "Detailed hardware preferences",
+#                                 "properties": {
+#                                     "cpu": {
+#                                         "type": "array",
+#                                         "description": "CPU requirements",
+#                                         "items": {
+#                                             "type": "object",
+#                                             "properties": {
+#                                                 "architecture": {
+#                                                     "type": "string",
+#                                                     "description": "CPU architecture (e.g. Zen)",
+#                                                     "example": "Zen"
+#                                                 },
+#                                                 "manufacturer": {
+#                                                     "type": "string",
+#                                                     "description": "CPU manufacturer (e.g. AMD)",
+#                                                     "example": "AMD"
+#                                                 }
+#                                             },
+#                                             "required": ["architecture", "manufacturer"]
+#                                         }
+#                                     },
+#                                     "memory": {
+#                                         "type": "array",
+#                                         "description": "Memory module specifications",
+#                                         "items": {
+#                                             "type": "object",
+#                                             "properties": {
+#                                                 "generation": {
+#                                                     "type": "string",
+#                                                     "description": "Memory generation (e.g. 4)",
+#                                                     "example": "4"
+#                                                 },
+#                                                 "type": {
+#                                                     "type": "string",
+#                                                     "description": "Type of RAM (e.g. DDR)",
+#                                                     "example": "DDR"
+#                                                 }
+#                                             },
+#                                             "required": ["generation", "type"]
+#                                         }
+#                                     },
+#                                     "storage": {
+#                                         "type": "array",
+#                                         "description": "Storage device types",
+#                                         "items": {
+#                                             "type": "object",
+#                                             "properties": {
+#                                                 "type": {
+#                                                     "type": "string",
+#                                                     "description": "Storage type (e.g. NVMe)",
+#                                                     "example": "NVMe"
+#                                                 }
+#                                             },
+#                                             "required": ["type"]
+#                                         }
+#                                     }
+#                                 },
+#                                 "required": ["cpu", "memory", "storage"]
+#                             },
+#                             "maxTotalPricePerEpochUsd": {
+#                                 "type": "string",
+#                                 "description": "Maximum total price allowed per epoch in USD",
+#                                 "example": "12.57426"
+#                             }
+#                         },
+#                         "required": ["additionalResources", "basicConfiguration", "datacenter", "hardware",
+#                                      "maxTotalPricePerEpochUsd"]
+#                     },
+#                     "instances": {
+#                         "type": "integer",
+#                         "minimum": 1,
+#                         "maximum": 10,
+#                         "description": "Number of VM instances to estimate cost for",
+#                         "example": 1
+#                     }
+#                 },
+#                 "required": ["constraints", "instances"]
+#             }
+#         },
+#         "required": ["api_key", "constraints_spec"]
+#     }
+
+#     async def execute(self, api_key, constraints_spec):
+#         try:
+#             url = "https://api.fluence.dev/vms/v3/estimate"
+#             headers = {
+#                 "Authorization": f"Bearer {api_key}",
+#                 "Content-Type": "application/json"
+#             }
+#             print("🚀 Request payload:\n", json.dumps(constraints_spec, indent=2))
+#             response = requests.post(url, headers=headers, json=constraints_spec, timeout=10)
+#             response.raise_for_status()
+#             data = response.json()
+#             return f"✅ Estimate completed successfully.\n{data}"
+#         except Exception as e:
+#             return f"❌ Error during estimate: {e}"
+
+
 class FluenceEstimateVMTool(BaseTool):
     name: str = "estimate_fluence_vm"
-    description: str = "Estimate cost for deploying one or more VMs with specified constraints and instance count."
+    description: str = "Estimate cost for deploying VMs using simplified structured input."
 
     parameters: dict = {
         "type": "object",
         "properties": {
-            "api_key": {
-                "type": "string",
-                "description": "Your Fluence API key for authentication"
-            },
-            "constraints_spec": {
-                "type": "object",
-                "description": "Specification of constraints and instance count for VM cost estimation",
-                "properties": {
-                    "constraints": {
-                        "type": "object",
-                        "description": "Constraints defining VM hardware requirements, datacenter preferences, resource limits, and pricing caps",
-                        "properties": {
-                            "additionalResources": {
-                                "type": "object",
-                                "description": "Additional resource requirements beyond basic hardware",
-                                "properties": {
-                                    "storage": {
-                                        "type": "array",
-                                        "description": "List of additional storage requirements",
-                                        "items": {
-                                            "type": "object",
-                                            "properties": {
-                                                "supply": {
-                                                    "type": "integer",
-                                                    "description": "Amount of storage requested",
-                                                    "example": 20
-                                                },
-                                                "type": {
-                                                    "type": "string",
-                                                    "description": "Type of storage device (e.g. NVMe)",
-                                                    "example": "NVMe"
-                                                },
-                                                "units": {
-                                                    "type": "string",
-                                                    "description": "Units of storage supply (e.g. GiB)",
-                                                    "example": "GiB"
-                                                }
-                                            },
-                                            "required": ["supply", "type", "units"]
-                                        }
-                                    }
-                                },
-                                "required": ["storage"]
-                            },
-                            "basicConfiguration": {
-                                "type": "string",
-                                "description": "Predefined basic VM configuration string indicating CPU, RAM, and storage size",
-                                "example": "cpu-4-ram-8gb-storage-25gb"
-                            },
-                            "datacenter": {
-                                "type": "object",
-                                "description": "Preferred datacenter locations by country codes",
-                                "properties": {
-                                    "countries": {
-                                        "type": "array",
-                                        "description": "List of ISO country codes for preferred datacenters",
-                                        "items": {"type": "string"},
-                                        "example": ["BE", "PL", "US"]
-                                    }
-                                },
-                                "required": ["countries"]
-                            },
-                            "hardware": {
-                                "type": "object",
-                                "description": "Detailed hardware preferences",
-                                "properties": {
-                                    "cpu": {
-                                        "type": "array",
-                                        "description": "CPU requirements",
-                                        "items": {
-                                            "type": "object",
-                                            "properties": {
-                                                "architecture": {
-                                                    "type": "string",
-                                                    "description": "CPU architecture (e.g. Zen)",
-                                                    "example": "Zen"
-                                                },
-                                                "manufacturer": {
-                                                    "type": "string",
-                                                    "description": "CPU manufacturer (e.g. AMD)",
-                                                    "example": "AMD"
-                                                }
-                                            },
-                                            "required": ["architecture", "manufacturer"]
-                                        }
-                                    },
-                                    "memory": {
-                                        "type": "array",
-                                        "description": "Memory module specifications",
-                                        "items": {
-                                            "type": "object",
-                                            "properties": {
-                                                "generation": {
-                                                    "type": "string",
-                                                    "description": "Memory generation (e.g. 4)",
-                                                    "example": "4"
-                                                },
-                                                "type": {
-                                                    "type": "string",
-                                                    "description": "Type of RAM (e.g. DDR)",
-                                                    "example": "DDR"
-                                                }
-                                            },
-                                            "required": ["generation", "type"]
-                                        }
-                                    },
-                                    "storage": {
-                                        "type": "array",
-                                        "description": "Storage device types",
-                                        "items": {
-                                            "type": "object",
-                                            "properties": {
-                                                "type": {
-                                                    "type": "string",
-                                                    "description": "Storage type (e.g. NVMe)",
-                                                    "example": "NVMe"
-                                                }
-                                            },
-                                            "required": ["type"]
-                                        }
-                                    }
-                                },
-                                "required": ["cpu", "memory", "storage"]
-                            },
-                            "maxTotalPricePerEpochUsd": {
-                                "type": "string",
-                                "description": "Maximum total price allowed per epoch in USD",
-                                "maxTotalPricePerEpochUsd": "12.57426"
-                            }
-                        },
-                        "required": ["additionalResources", "basicConfiguration", "datacenter", "hardware",
-                                     "maxTotalPricePerEpochUsd"]
-                    },
-                    "instances": {
-                        "type": "integer",
-                        "minimum": 1,
-                        "maximum": 10,
-                        "description": "Number of VM instances to estimate cost for",
-                        "example": 1
-                    }
-                },
-                "required": ["constraints", "instances"]
-            }
+            "api_key": {"type": "string"},
+            "cpu_cores": {"type": "integer"},
+            "cpu_architecture": {"type": "string", "enum": ["Zen"]},  # 限定值
+            "cpu_manufacturer": {"type": "string", "enum": ["AMD"]},
+            "ram_size_gb": {"type": "integer"},
+            "ram_type": {"type": "string", "enum": ["DDR4"]},
+            "storage_size_gb": {"type": "integer"},
+            "storage_type": {"type": "string", "enum": ["NVMe"]},  # 保留大小写
+            "location_country_code": {"type": "string", "enum": ["PL"]},
+            "instances": {"type": "integer", "minimum": 1, "maximum": 10},
+            "max_price_usd": {"type": "string"}
         },
-        "required": ["api_key", "constraints_spec"]
+        "required": [
+            "api_key", "cpu_cores", "cpu_architecture", "cpu_manufacturer",
+            "ram_size_gb", "ram_type", "storage_size_gb", "storage_type",
+            "location_country_code", "instances", "max_price_usd"
+        ]
     }
 
-    async def execute(self, api_key, constraints_spec):
+    async def execute(self, api_key, cpu_cores, cpu_architecture, cpu_manufacturer,
+                      ram_size_gb, ram_type, storage_size_gb, storage_type,
+                      location_country_code, instances, max_price_usd):
+        import requests, json
+
         try:
-            url = "https://api.fluence.dev/vms/v3/estimate"
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
+            # 1️⃣ 数据清洗（如果外部未处理好）
+            cpu_architecture = cpu_architecture.strip()
+            cpu_manufacturer = cpu_manufacturer.strip().upper()  # "AMD"
+            ram_type = ram_type.strip().upper()                  # "DDR4"
+            storage_type = storage_type.strip()                  # "NVMe"
+            location_country_code = location_country_code.strip().upper()
+
+            # 2️⃣ RAM 类型解析（如 DDR4 → {"type": "DDR", "generation": "4"}）
+            if ram_type.startswith("DDR"):
+                ram_generation = ram_type[-1]
+                ram_base_type = "DDR"
+            else:
+                ram_generation = "4"
+                ram_base_type = ram_type
+
+            # 3️⃣ 构造 payload
+            payload = {
+                "constraints": {
+                    "additionalResources": {
+                        "storage": [
+                            {
+                                "supply": storage_size_gb,
+                                "type": storage_type,
+                                "units": "GiB"
+                            }
+                        ]
+                    },
+                    "basicConfiguration": f"cpu-{cpu_cores}-ram-{ram_size_gb}gb-storage-{storage_size_gb}gb",
+                    "datacenter": {
+                        "countries": [location_country_code]
+                    },
+                    "hardware": {
+                        "cpu": [
+                            {
+                                "architecture": cpu_architecture,  # 保留大小写，不做转化
+                                "manufacturer": cpu_manufacturer
+                            }
+                        ],
+                        "memory": [
+                            {
+                                "generation": ram_generation,
+                                "type": ram_base_type
+                            }
+                        ],
+                        "storage": [
+                            {
+                                "type": storage_type
+                            }
+                        ]
+                    },
+                    "maxTotalPricePerEpochUsd": str(max_price_usd)
+                },
+                "instances": int(instances)
             }
-            response = requests.post(url, headers=headers, json=constraints_spec, timeout=10)
+
+            print("🚀 Request payload:\n", json.dumps(payload, indent=2))
+
+            response = requests.post(
+                url="https://api.fluence.dev/vms/v3/estimate",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                json=payload,
+                timeout=10
+            )
             response.raise_for_status()
-            data = response.json()
-            return f"✅ Estimate completed successfully.\n{data}"
+            return f"✅ Estimate completed successfully.\n{json.dumps(response.json(), indent=2)}"
+
         except Exception as e:
             return f"❌ Error during estimate: {e}"
+
+
 
 
 class FluenceListBasicConfigurationsTool(BaseTool):
@@ -788,6 +896,7 @@ async def test_patch_vm():
 
     result = await tool.execute(api_key=api_key, patch_data=patch_data)
     print("🧪 Patch VM Result:", result)
+
 
 async def test_list_default_images():
     api_key = os.getenv("FLUENCE_API_KEY")
