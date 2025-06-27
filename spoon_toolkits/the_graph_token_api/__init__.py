@@ -1,4 +1,4 @@
-# https://mainnet.auto-drive.autonomys.xyz/api/docs
+# https://thegraph.com/docs/en/token-api/evm/get-balances-evm-by-address/
 from fastmcp import FastMCP
 from spoon_ai.tools.the_graph_token_api.balances_by_address import mcp as balances_by_address_server
 from spoon_ai.tools.the_graph_token_api.historical_balances import mcp as historical_balances_server
