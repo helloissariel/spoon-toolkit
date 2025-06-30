@@ -5,7 +5,7 @@ from .utils import normalize_ethereum_contract_address
 mcp = FastMCP("TheGraphTokenApiTokenMetadata")
 
 @mcp.tool()
-async def token_holders(address: str, network_id: str = "mainnet"):
+async def token_metadata(contract: str, network_id: str = "mainnet"):
     """
     Get the metadata of an ERC-20 token contract address.
     network_id: arbitrum-one, avalanche, base, bsc, mainnet, matic, optimism, unichain
@@ -28,7 +28,7 @@ async def token_holders(address: str, network_id: str = "mainnet"):
       ]
     }
     """
-    address = normalize_ethereum_contract_address(address)
-    resp = await the_graph_token_api_client.get(f"/holders/evm/{address}?network_id={network_id}")
+    contract = normalize_ethereum_contract_address(contract)
+    resp = await the_graph_token_api_client.get(f"/tokens/evm/{contract}?network_id={network_id}")
     resp = resp.json()
     return resp
