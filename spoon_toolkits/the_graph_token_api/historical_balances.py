@@ -21,9 +21,9 @@ async def historical_balances(
     url = f"/historical/balances/evm/{address}?network={network_id}&interval={interval}"
     if end_time == 0:
         end_time = datetime.datetime.now(tz=datetime.timezone.utc).timestamp()
-    url += f"&end_time={end_time}"
+    url += f"&endTime={end_time}"
     if start_time:
-        url += f"&start_time={start_time}"
+        url += f"&startTime={start_time}"
     if contracts:
         url += f"&contracts={contracts}"
     resp = await the_graph_token_api_client.get(url)
