@@ -5,9 +5,10 @@ from .utils import normalize_ethereum_contract_address
 mcp = FastMCP("TheGraphTokenApiBalancesByAddress")
 
 @mcp.tool()
-async def balances_by_address(address: str):
+async def balances_by_address(address: str, network_id: str = "mainnet"):
     """
     Get the ERC-20 and native ether balances of an address.
+    network_id: arbitrum-one, avalanche, base, bsc, mainnet, matic, optimism, unichain
     {
       "data": [
         {
@@ -24,6 +25,6 @@ async def balances_by_address(address: str):
     }
     """
     address = normalize_ethereum_contract_address(address)
-    resp = await the_graph_token_api_client.get(f"/balances/evm/{address}")
+    resp = await the_graph_token_api_client.get(f"/balances/evm/{address}?network={network_id}")
     resp = resp.json()
     return resp
