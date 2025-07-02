@@ -10,14 +10,14 @@ from .supported_chains import mcp as supported_chains_server
 from .token_security import mcp as token_security_server
 
 mcp_server = FastMCP("GoPlusLabsServer")
-mcp_server.mount("ApprovalSecurity", approval_security_server)
-mcp_server.mount("DappSecurity", dapp_security_server)
-mcp_server.mount("MaliciousAddress", malicious_address_server)
-mcp_server.mount("NftSecurity", nft_security_server)
-mcp_server.mount("PhishingSite", phishing_site_server)
-mcp_server.mount("RugPullDetection", rug_pull_detection_server)
-mcp_server.mount("SupportedChains", supported_chains_server)
-mcp_server.mount("TokenSecurity", token_security_server)
+mcp_server.mount(approval_security_server, "ApprovalSecurity")
+mcp_server.mount(dapp_security_server, "DappSecurity")
+mcp_server.mount(malicious_address_server, "MaliciousAddress")
+mcp_server.mount(nft_security_server, "NftSecurity")
+mcp_server.mount(phishing_site_server, "PhishingSite")
+mcp_server.mount(rug_pull_detection_server, "RugPullDetection")
+mcp_server.mount(supported_chains_server, "SupportedChains")
+mcp_server.mount(token_security_server, "TokenSecurity")
 
 if __name__ == "__main__":
     # mcp_server.run(host='0.0.0.0', port=8000)
