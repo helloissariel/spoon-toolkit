@@ -101,7 +101,7 @@ async def test_upload_file_to_foureverland():
     bucket_name = os.getenv("FOREVERLAND_BUCKET_NAME")
     file_path = "/Users/weixiaole/Downloads/file1.txt"
 
-    # 创建测试文件
+    # Create test file
     with open(file_path, 'w') as f:
         f.write("🌍 4EVERLAND test content")
 

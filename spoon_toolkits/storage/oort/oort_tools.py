@@ -10,7 +10,7 @@ class OortStorageTool(S3Tool):
     aws_secret_access_key: str = "OORT_SECRET_KEY"
 
 
-# ----------- 各功能 Function Tool 类 --------------
+# ----------- Function Tool Classes --------------
 
 class OortCreateBucketTool(OortStorageTool):
     name: str = "create_oort_bucket"
@@ -212,7 +212,7 @@ async def test_generate_presigned_url():
     print("🧪 Generate Presigned URL Result:\n", result)
 
 
-# 统一运行所有测试
+# Run all tests uniformly
 async def run_all_tests():
     await test_create_bucket()
     # await test_list_buckets()
