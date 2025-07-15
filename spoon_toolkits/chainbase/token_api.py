@@ -11,7 +11,7 @@ base_url = "https://api.chainbase.online/v1"
 mcp = FastMCP(name="ChainbaseTokenAPIServer")
 
 @mcp.tool()
-async def get_token_metadata(ctx: Context = None, chain_id: int = 1, 
+async def get_token_metadata(ctx: Context = None, chain_id: int = 1,
                             contract_address: str = None):
     """Get the metadata of a specified token.
     args:
@@ -24,13 +24,13 @@ async def get_token_metadata(ctx: Context = None, chain_id: int = 1,
     try:
         url = f"{base_url}/token/metadata"
         headers = {"x-api-key": api_key}
-        
-        # 构建查询参数
+
+        # Build query parameters
         querystring = {
             "chain_id": int(chain_id),
             "contract_address": contract_address
         }
-            
+
         response = requests.request("GET", url, headers=headers, params=querystring)
         return response.json()
     except Exception as e:
@@ -55,15 +55,15 @@ async def get_token_top_holders(ctx: Context = None, chain_id: int = 1,
     try:
         url = f"{base_url}/token/top-holders"
         headers = {"x-api-key": api_key}
-        
-        # 构建查询参数
+
+        # Build query parameters
         querystring = {
             "chain_id": int(chain_id),
             "contract_address": contract_address,
             "page": max(page, 1),       # Ensure page number is at least 1
             "limit": min(limit, 100)    # Ensure not exceeding API limit
         }
-            
+
         response = requests.request("GET", url, headers=headers, params=querystring)
         return response.json()
     except Exception as e:
@@ -88,15 +88,15 @@ async def get_token_holders(ctx: Context = None, chain_id: int = 1,
     try:
         url = f"{base_url}/token/holders"
         headers = {"x-api-key": api_key}
-        
-        # 构建查询参数
+
+        # Build query parameters
         querystring = {
             "chain_id": int(chain_id),
             "contract_address": contract_address,
             "page": max(page, 1),       # Ensure page number is at least 1
             "limit": min(limit, 100)    # Ensure not exceeding API limit
         }
-            
+
         response = requests.request("GET", url, headers=headers, params=querystring)
         return response.json()
     except Exception as e:
@@ -118,13 +118,13 @@ async def get_token_price(ctx: Context = None, chain_id: int = 1,
     try:
         url = f"{base_url}/token/price"
         headers = {"x-api-key": api_key}
-        
-        # 构建查询参数
+
+        # Build query parameters
         querystring = {
             "chain_id": int(chain_id),
             "contract_address": contract_address
         }
-            
+
         response = requests.request("GET", url, headers=headers, params=querystring)
         return response.json()
     except Exception as e:
@@ -150,15 +150,15 @@ async def get_token_price_history(ctx: Context = None, chain_id: int = 1,
     try:
         url = f"{base_url}/token/price/history"
         headers = {"x-api-key": api_key}
-        
-        # 构建查询参数
+
+        # Build query parameters
         querystring = {
             "chain_id": int(chain_id),
             "contract_address": contract_address,
             "from_timestamp": from_timestamp,
             "end_timestamp": end_timestamp
         }
-            
+
         response = requests.request("GET", url, headers=headers, params=querystring)
         return response.json()
     except Exception as e:
@@ -193,14 +193,14 @@ async def get_token_transfers(ctx: Context = None, chain_id: int = 1,
     try:
         url = f"{base_url}/token/transfers"
         headers = {"x-api-key": api_key}
-        
-        # 构建查询参数
+
+        # Build query parameters
         querystring = {
             "chain_id": int(chain_id),
             "page": max(page, 1),       # Ensure page number is at least 1
             "limit": min(limit, 100)    # Ensure not exceeding API limit
         }
-        
+
         # Add optional parameters
         if contract_address:
             querystring["contract_address"] = contract_address
@@ -214,7 +214,7 @@ async def get_token_transfers(ctx: Context = None, chain_id: int = 1,
             querystring["from_timestamp"] = from_timestamp
         if end_timestamp:
             querystring["end_timestamp"] = end_timestamp
-            
+
         response = requests.request("GET", url, headers=headers, params=querystring)
         return response.json()
     except Exception as e:
@@ -233,20 +233,20 @@ def get_token_metadata_docs():
     """Returns documentation for the Token Metadata API endpoint."""
     return """
     # Token Metadata API
-    
+
     Get the metadata of a specified token.
-    
+
     ## Endpoint
-    
+
     `GET /v1/token/metadata`
-    
+
     ## Parameters
-    
+
     - `chain_id` (required): Chain network ID
     - `contract_address` (required): The address of the token contract
-    
+
     ## Response Structure
-    
+
     ```json
     {
       "code": 0,
@@ -280,22 +280,22 @@ def get_token_top_holders_docs():
     """Returns documentation for the Token Top Holders API endpoint."""
     return """
     # Token Top Holders API
-    
+
     Get the list of top holders of the specified contract.
-    
+
     ## Endpoint
-    
+
     `GET /v1/token/top-holders`
-    
+
     ## Parameters
-    
+
     - `chain_id` (required): Chain network ID
     - `contract_address` (required): The address of the token contract
     - `page` (optional): The page offset, default is 1
     - `limit` (optional): The desired page size limit. Less or equal than 100, default is 20
-    
+
     ## Response Structure
-    
+
     ```json
     {
       "code": 0,
@@ -324,22 +324,22 @@ def get_token_holders_docs():
     """Returns documentation for the Token Holders API endpoint."""
     return """
     # Token Holders API
-    
+
     Get the list of holders of the specified contract.
-    
+
     ## Endpoint
-    
+
     `GET /v1/token/holders`
-    
+
     ## Parameters
-    
+
     - `chain_id` (required): Chain network ID
     - `contract_address` (required): The address of the token contract
     - `page` (optional): The page offset, default is 1
     - `limit` (optional): The desired page size limit. Less or equal than 100, default is 20
-    
+
     ## Response Structure
-    
+
     ```json
     {
       "code": 0,
@@ -364,20 +364,20 @@ def get_token_price_docs():
     """Returns documentation for the Token Price API endpoint."""
     return """
     # Token Price API
-    
+
     Get the price of the specified token.
-    
+
     ## Endpoint
-    
+
     `GET /v1/token/price`
-    
+
     ## Parameters
-    
+
     - `chain_id` (required): Chain network ID
     - `contract_address` (required): The address of the token contract
-    
+
     ## Response Structure
-    
+
     ```json
     {
       "code": 0,
@@ -403,22 +403,22 @@ def get_token_price_history_docs():
     """Returns documentation for the Token Price History API endpoint."""
     return """
     # Token Price History API
-    
+
     Get the historical price of the specified token.
-    
+
     ## Endpoint
-    
+
     `GET /v1/token/price/history`
-    
+
     ## Parameters
-    
+
     - `chain_id` (required): Chain network ID
     - `contract_address` (required): The address of the token contract
     - `from_timestamp` (required): Inclusive start timestamp
     - `end_timestamp` (required): Inclusive end timestamp, the interval should not exceed 90 days
-    
+
     ## Response Structure
-    
+
     ```json
     {
       "code": 0,
@@ -439,7 +439,7 @@ def get_token_price_history_docs():
       ]
     }
     ```
-    
+
     Note: The interval between from_timestamp and end_timestamp should not exceed 90 days.
     """
 
@@ -454,15 +454,15 @@ def get_token_transfers_docs():
     """Returns documentation for the Token Transfers API endpoint."""
     return """
     # Token Transfers API
-    
+
     Retrieves historical token transfer transactions for any ERC20 contract.
-    
+
     ## Endpoint
-    
+
     `GET /v1/token/transfers`
-    
+
     ## Parameters
-    
+
     - `chain_id` (required): Chain network ID
     - `contract_address` (optional): The address of the token contract
     - `address` (optional): A hex string referencing a wallet address
@@ -472,9 +472,9 @@ def get_token_transfers_docs():
     - `end_timestamp` (optional): Inclusive end timestamp
     - `page` (optional): The page offset, default is 1
     - `limit` (optional): The desired page size limit. Less or equal than 100, default is 20
-    
+
     ## Response Structure
-    
+
     ```json
     {
       "code": 0,
@@ -503,7 +503,7 @@ if __name__ == "__main__":
     # Print confirmation that API key is set
     if not os.environ.get("CHAINBASE_API_KEY"):
         api_key = "2yZuGx0TrNSY7VWsi5iZcIVbg72"
-    
+
     # Start FastMCP server with SSE transport protocol
     mcp.run(
         transport="sse",

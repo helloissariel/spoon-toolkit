@@ -43,7 +43,7 @@ class FluenceCreateSSHKeyTool(BaseTool):
     }
 
     async def execute(self, api_key, name, public_key):
-        # 注意name： 只能使用 小写字母、数字、中划线 -，最长 25 个字符
+        # Note on name: Only lowercase letters, numbers, hyphens - allowed, max 25 characters
         try:
             url = "https://api.fluence.dev/ssh_keys"
             headers = {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
@@ -543,12 +543,12 @@ class FluenceEstimateVMTool(BaseTool):
         "properties": {
             "api_key": {"type": "string"},
             "cpu_cores": {"type": "integer"},
-            "cpu_architecture": {"type": "string", "enum": ["Zen"]},  # 限定值
+            "cpu_architecture": {"type": "string", "enum": ["Zen"]},  # Restricted values
             "cpu_manufacturer": {"type": "string", "enum": ["AMD"]},
             "ram_size_gb": {"type": "integer"},
             "ram_type": {"type": "string", "enum": ["DDR4"]},
             "storage_size_gb": {"type": "integer"},
-            "storage_type": {"type": "string", "enum": ["NVMe"]},  # 保留大小写
+            "storage_type": {"type": "string", "enum": ["NVMe"]},  # Preserve case
             "location_country_code": {"type": "string", "enum": ["PL"]},
             "instances": {"type": "integer", "minimum": 1, "maximum": 10},
             "max_price_usd": {"type": "string"}
@@ -566,14 +566,14 @@ class FluenceEstimateVMTool(BaseTool):
         import requests, json
 
         try:
-            # 1️⃣ 数据清洗（如果外部未处理好）
+            # 1️⃣ Data cleaning (if not handled externally)
             cpu_architecture = cpu_architecture.strip()
             cpu_manufacturer = cpu_manufacturer.strip().upper()  # "AMD"
             ram_type = ram_type.strip().upper()                  # "DDR4"
             storage_type = storage_type.strip()                  # "NVMe"
             location_country_code = location_country_code.strip().upper()
 
-            # 2️⃣ RAM 类型解析（如 DDR4 → {"type": "DDR", "generation": "4"}）
+            # 2️⃣ RAM type parsing (e.g., DDR4 → {"type": "DDR", "generation": "4"})
             if ram_type.startswith("DDR"):
                 ram_generation = ram_type[-1]
                 ram_base_type = "DDR"
@@ -581,7 +581,7 @@ class FluenceEstimateVMTool(BaseTool):
                 ram_generation = "4"
                 ram_base_type = ram_type
 
-            # 3️⃣ 构造 payload
+            # 3️⃣ Construct payload
             payload = {
                 "constraints": {
                     "additionalResources": {
@@ -600,7 +600,7 @@ class FluenceEstimateVMTool(BaseTool):
                     "hardware": {
                         "cpu": [
                             {
-                                "architecture": cpu_architecture,  # 保留大小写，不做转化
+                                "architecture": cpu_architecture,  # Preserve case, no conversion
                                 "manufacturer": cpu_manufacturer
                             }
                         ],
@@ -871,7 +871,7 @@ async def test_create_vm():
 async def test_delete_vm():
 
     api_key = os.getenv("FLUENCE_API_KEY")
-    vm_ids = ["xxx"]  
+    vm_ids = ["xxx"]
     tool = FluenceDeleteVMTool()
     result = await tool.execute(api_key=api_key, vm_ids=vm_ids)
     print("🧪 Delete VM:", result)
@@ -884,7 +884,7 @@ async def test_patch_vm():
     patch_data = {
         "updates": [
             {
-                "id": "0x4c5305d9EE657047F93B523eBfb617E6ADb6BB43",  # 替换成你的 VM ID
+                "id": "0x4c5305d9EE657047F93B523eBfb617E6ADb6BB43",  # Replace with your VM ID
                 "vmName": "moon-vm-name",
                 "openPorts": [
                     {"port": 22, "protocol": "tcp"},
@@ -1021,7 +1021,7 @@ if __name__ == '__main__':
         # ssh key test
         # await test_list_ssh_keys()
         # await test_create_and_delete_ssh_key()
-        
+
         # vm test
         # await test_list_vms()
         # await test_create_vm()
@@ -1034,7 +1034,7 @@ if __name__ == '__main__':
         # await test_marketplace_countries()
         # await test_marketplace_hardware()
         # await test_marketplace_post_offers()
-        
+
 
 
     asyncio.run(run_all_tests())
