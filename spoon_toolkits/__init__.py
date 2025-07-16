@@ -10,6 +10,18 @@ from .crypto.price_data import GetTokenPriceTool, Get24hStatsTool, GetKlineDataT
 from .crypto.price_alerts import PriceThresholdAlertTool, LpRangeCheckTool, SuddenPriceIncreaseTool
 from .crypto.lending_rates import LendingRateMonitorTool
 
+from .crypto_powerdata import (
+    CryptoPowerDataCEXTool,
+    CryptoPowerDataDEXTool,
+    CryptoPowerDataIndicatorsTool,
+    CryptoPowerDataPriceTool,
+    start_crypto_powerdata_mcp_stdio,
+    start_crypto_powerdata_mcp_sse,
+    start_crypto_powerdata_mcp_auto,
+    CryptoPowerDataMCPServer,
+    get_server_manager,
+)
+
 from .fluence.fluence_tools import (
     FluenceListSSHKeysTool,
     FluenceCreateSSHKeyTool,
@@ -51,10 +63,10 @@ __all__ = [
     "FluenceListHardwareTool",
     "SearchFluenceMarketplaceOffers",
 
-    "PredictPrice", 
-    "TokenHolders", 
-    "TradingHistory", 
-    "UniswapLiquidity", 
+    "PredictPrice",
+    "TokenHolders",
+    "TradingHistory",
+    "UniswapLiquidity",
     "WalletAnalysis",
     "GetTokenPriceTool",
     "Get24hStatsTool",
@@ -70,5 +82,16 @@ __all__ = [
     "GetContractTransactionsTool",
     "GetContractTransactionsBySignatureTool",
     "GetBlocksFromThirdwebInsight",
-    "GetWalletTransactionsFromThirdwebInsight"
+    "GetWalletTransactionsFromThirdwebInsight",
+
+    # Crypto PowerData tools
+    "CryptoPowerDataCEXTool",
+    "CryptoPowerDataDEXTool",
+    "CryptoPowerDataIndicatorsTool",
+    "CryptoPowerDataPriceTool",
+    "start_crypto_powerdata_mcp_stdio",
+    "start_crypto_powerdata_mcp_sse",
+    "start_crypto_powerdata_mcp_auto",
+    "CryptoPowerDataMCPServer",
+    "get_server_manager",
 ]

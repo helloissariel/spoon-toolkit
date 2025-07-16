@@ -85,6 +85,28 @@ Provides comprehensive cryptocurrency market data and analysis tools:
   - Uniswap liquidity pool analysis
   - LP yield calculation
 
+### 📊 Crypto PowerData - Advanced Cryptocurrency Data & Indicators Tools
+**Path**: `crypto_powerdata/`
+
+Provides advanced cryptocurrency market data and technical analysis tools:
+
+- **CEX Data with Indicators** (`CryptoPowerDataCEXTool`)
+  - Fetch candlestick data from 100+ centralized exchanges (e.g., Binance, Coinbase, Kraken)
+  - Apply comprehensive technical indicators (e.g., EMA, MACD, RSI)
+
+- **DEX Data with Indicators** (`CryptoPowerDataDEXTool`)
+  - Fetch candlestick data from decentralized exchanges via OKX DEX API
+  - Apply comprehensive technical indicators for on-chain data
+
+- **Real-time Price Retrieval** (`CryptoPowerDataPriceTool`)
+  - Get real-time cryptocurrency prices from both CEX and DEX sources
+
+- **Indicators Listing** (`CryptoPowerDataIndicatorsTool`)
+  - List all available technical indicators and their configurations
+
+- **MCP Server Support**
+  - Can run as a Multi-Chain Protocol (MCP) server for enhanced data streaming and integration
+
 ### 🌐 Neo - Neo Blockchain Tools
 **Path**: `neo/`
 
@@ -264,18 +286,44 @@ result = await tool.upload_file(bucket_name="my-bucket", file_path="./file.txt")
 ```python
 from spoon_toolkits.chainbase import GetLatestBlockNumberTool, GetAccountBalanceTool
 
-# 获取以太坊最新区块
+# Get the latest Ethereum block
 block_tool = GetLatestBlockNumberTool()
 block_result = await block_tool.execute(chain_id=1)
-print(f"最新区块: {block_result}")
+print(f"Latest Block: {block_result}")
 
-# 获取账户ETH余额
+# Get account ETH balance
 balance_tool = GetAccountBalanceTool()
 balance_result = await balance_tool.execute(
     chain_id=1,
     address="0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"  # vitalik.eth
 )
-print(f"账户余额: {balance_result}")
+print(f"Account Balance: {balance_result}")
+```
+
+#### 6. Crypto PowerData Usage
+
+```python
+from spoon_toolkits.crypto_powerdata import CryptoPowerDataCEXTool, CryptoPowerDataPriceTool
+
+# Get CEX data with EMA and RSI indicators
+cex_tool = CryptoPowerDataCEXTool()
+cex_data = await cex_tool.execute(
+    exchange="binance",
+    symbol="BTC/USDT",
+    timeframe="1d",
+    limit=100,
+    indicators_config='{\"ema\": [{\"timeperiod\": 12}, {\"timeperiod\": 26}], \"rsi\": [{\"timeperiod\": 14}]}'
+)
+print(f"CEX Data with Indicators: {cex_data}")
+
+# Get real-time DEX token price
+price_tool = CryptoPowerDataPriceTool()
+dex_price = await price_tool.execute(
+    source="dex",
+    chain_index="1", # Ethereum
+    token_address="0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2" # WETH
+)
+print(f"DEX Token Price: {dex_price}")
 ```
 
 ## 🔧 Tool Features
@@ -322,4 +370,4 @@ For questions or suggestions, please submit an Issue or contact the development 
 
 ---
 
-**Note**: When using these tools, please ensure that you have properly configured the relevant API keys and environment variables. Some features may require paid API services. 
+**Note**: When using these tools, please ensure that you have properly configured the relevant API keys and environment variables. Some features may require paid API services.
