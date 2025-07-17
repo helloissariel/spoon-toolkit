@@ -5,10 +5,11 @@ from .utils import normalize_ethereum_contract_address
 mcp = FastMCP("TheGraphTokenApiTokenHolders")
 
 @mcp.tool()
-async def token_holders(address: str, network_id: str = "mainnet"):
+async def token_holders(address: str, network_id: str = "mainnet", order_direction: str = "desc"):
     """
     Get the holders of an ERC-20 token contract address.
     network_id: arbitrum-one, avalanche, base, bsc, mainnet, matic, optimism, unichain
+    order_direction: asc, desc
     {
       "data": [
         {
@@ -25,6 +26,6 @@ async def token_holders(address: str, network_id: str = "mainnet"):
     }
     """
     address = normalize_ethereum_contract_address(address)
-    resp = await the_graph_token_api_client.get(f"/holders/evm/{address}?network_id={network_id}")
+    resp = await the_graph_token_api_client.get(f"/holders/evm/{address}?network_id={network_id}?orderDirection={order_direction}")
     resp = resp.json()
     return resp
