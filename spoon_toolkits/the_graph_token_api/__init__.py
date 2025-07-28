@@ -10,14 +10,14 @@ from .token_metadata import mcp as token_metadata_server
 from .transfer_events import mcp as transfer_events_server
 
 mcp_server = FastMCP("TheGraphTokenApiServer")
-mcp_server.mount("BalancesByAddress", balances_by_address_server)
-mcp_server.mount("HistoricalBalances", historical_balances_server)
-mcp_server.mount("Nft", nft_server)
-mcp_server.mount("Ohlcv", ohlcv_server)
-mcp_server.mount("SwapEvents", swap_events_server)
-mcp_server.mount("TokenHolders", token_holders_server)
-mcp_server.mount("TokenMetadata", token_metadata_server)
-mcp_server.mount("TransferEvents", transfer_events_server)
+mcp_server.mount(balances_by_address_server, "BalancesByAddress")
+mcp_server.mount(historical_balances_server, "HistoricalBalances")
+mcp_server.mount(nft_server, "Nft")
+mcp_server.mount(ohlcv_server, "Ohlcv")
+mcp_server.mount(swap_events_server, "SwapEvents")
+mcp_server.mount(token_holders_server, "TokenHolders")
+mcp_server.mount(token_metadata_server, "TokenMetadata")
+mcp_server.mount(transfer_events_server, "TransferEvents")
 
 if __name__ == "__main__":
     # mcp_server.run(host='0.0.0.0', port=8000)
