@@ -2,7 +2,7 @@
 AI Search tool using official Desearch SDK
 """
 
-from fastmcp import FastMCP
+from fastmcp import FastMCP, Context
 try:
     from .cache import time_cache
 except ImportError:
@@ -16,12 +16,12 @@ mcp = FastMCP("AISearch")
 async def search_ai_data(query: str, platforms: str = "web,reddit,wikipedia,youtube", limit: int = 10) -> Dict[str, Any]:
     """
     Search for AI-related data across multiple platforms using Desearch API.
-    
+
     Args:
         query: Search query string
         platforms: Comma-separated list of platforms (web, reddit, wikipedia, youtube, twitter, arxiv)
         limit: Number of results per platform (minimum 10)
-    
+
     Returns:
         Dictionary containing search results from all platforms
     """
@@ -32,16 +32,16 @@ async def _search_ai_data_impl(query: str, platforms: str = "web,reddit,wikipedi
     try:
         from desearch_py import Desearch
         from env import DESEARCH_API_KEY
-        
+
         # Ensure minimum limit
         limit = max(limit, 10)
-        
+
         # Initialize Desearch client
         desearch = Desearch(api_key=DESEARCH_API_KEY)
-        
+
         # Parse platforms
         platform_list = [p.strip() for p in platforms.split(",")]
-        
+
         # Map platform names to SDK tool names
         tool_mapping = {
             'web': 'web',
@@ -52,13 +52,13 @@ async def _search_ai_data_impl(query: str, platforms: str = "web,reddit,wikipedi
             'arxiv': 'arxiv',
             'hackernews': 'hackernews'
         }
-        
+
         # Filter valid tools
         valid_tools = [tool_mapping.get(p, p) for p in platform_list if p in tool_mapping]
-        
+
         if not valid_tools:
             return {"error": "No valid platforms specified"}
-        
+
         # Perform AI search
         result = desearch.ai_search(
             prompt=query,
@@ -66,7 +66,7 @@ async def _search_ai_data_impl(query: str, platforms: str = "web,reddit,wikipedi
             count=limit,
             streaming=False
         )
-        
+
         # Process results
         processed_results = {}
         for tool, tool_results in result.items():
@@ -81,14 +81,14 @@ async def _search_ai_data_impl(query: str, platforms: str = "web,reddit,wikipedi
                     'count': len(tool_results) if isinstance(tool_results, list) else 1,
                     'results': tool_results
                 }
-        
+
         return {
             "query": query,
             "platforms": platform_list,
             "results": processed_results,
             "total_results": sum(r.get('count', 0) for r in processed_results.values())
         }
-        
+
     except Exception as e:
         return {"error": str(e)}
 
@@ -97,12 +97,12 @@ async def _search_ai_data_impl(query: str, platforms: str = "web,reddit,wikipedi
 async def search_social_media(query: str, platform: str = "twitter", limit: int = 10) -> Dict[str, Any]:
     """
     Search social media platforms for real-time information.
-    
+
     Args:
         query: Search query string
         platform: Platform to search (twitter, reddit)
         limit: Number of results (minimum 10)
-    
+
     Returns:
         Dictionary containing social media search results
     """
@@ -113,13 +113,13 @@ async def _search_social_media_impl(query: str, platform: str = "twitter", limit
     try:
         from desearch_py import Desearch
         from env import DESEARCH_API_KEY
-        
+
         # Ensure minimum limit
         limit = max(limit, 10)
-        
+
         # Initialize Desearch client
         desearch = Desearch(api_key=DESEARCH_API_KEY)
-        
+
         if platform.lower() == "twitter":
             result = desearch.basic_twitter_search(
                 query=query,
@@ -137,14 +137,14 @@ async def _search_social_media_impl(query: str, platform: str = "twitter", limit
             result = result.get('reddit_search', [])
         else:
             return {"error": f"Unsupported platform: {platform}"}
-        
+
         return {
             "platform": platform,
             "query": query,
             "results": result,
             "count": len(result) if isinstance(result, list) else 1
         }
-        
+
     except Exception as e:
         return {"error": str(e)}
 
@@ -153,12 +153,12 @@ async def _search_social_media_impl(query: str, platform: str = "twitter", limit
 async def search_academic(query: str, platform: str = "arxiv", limit: int = 10) -> Dict[str, Any]:
     """
     Search academic platforms for research papers and scholarly content.
-    
+
     Args:
         query: Search query string
         platform: Platform to search (arxiv, wikipedia)
         limit: Number of results (minimum 10)
-    
+
     Returns:
         Dictionary containing academic search results
     """
@@ -169,13 +169,13 @@ async def _search_academic_impl(query: str, platform: str = "arxiv", limit: int 
     try:
         from desearch_py import Desearch
         from env import DESEARCH_API_KEY
-        
+
         # Ensure minimum limit
         limit = max(limit, 10)
-        
+
         # Initialize Desearch client
         desearch = Desearch(api_key=DESEARCH_API_KEY)
-        
+
         if platform.lower() == "arxiv":
             # Use AI search for ArXiv
             result = desearch.ai_search(
@@ -196,13 +196,13 @@ async def _search_academic_impl(query: str, platform: str = "arxiv", limit: int 
             result = result.get('wikipedia_search', [])
         else:
             return {"error": f"Unsupported platform: {platform}"}
-        
+
         return {
             "platform": platform,
             "query": query,
             "results": result,
             "count": len(result) if isinstance(result, list) else 1
         }
-        
+
     except Exception as e:
-        return {"error": str(e)} 
+        return {"error": str(e)}

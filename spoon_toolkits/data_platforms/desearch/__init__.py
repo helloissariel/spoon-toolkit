@@ -16,9 +16,9 @@ except ImportError:
 # Create main MCP server
 mcp_server = FastMCP("DesearchServer")
 
-# Mount sub-servers (using new syntax)
-mcp_server.mount(ai_search_server)
-mcp_server.mount(web_search_server)
+# Mount sub-servers (using correct syntax with prefix)
+mcp_server.mount("ai_search", ai_search_server)
+mcp_server.mount("web_search", web_search_server)
 
 # Export main functions for direct use
 try:
@@ -50,7 +50,7 @@ except ImportError:
 __all__ = [
     "mcp_server",
     "search_ai_data",
-    "search_social_media", 
+    "search_social_media",
     "search_academic",
     "search_web",
     "search_twitter_links",
@@ -58,4 +58,4 @@ __all__ = [
 ]
 
 if __name__ == "__main__":
-    mcp_server.run() 
+    mcp_server.run()
