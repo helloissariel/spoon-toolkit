@@ -32,6 +32,14 @@ from .data_platforms.third_web.third_web_tools import (
     GetWalletTransactionsFromThirdwebInsight
 )
 
+from .data_platforms.desearch.ai_search_official import search_ai_data, search_social_media, search_academic
+from .data_platforms.desearch.builtin_tools import (
+    DesearchAISearchTool,
+    DesearchWebSearchTool,
+    DesearchAcademicSearchTool,
+    DesearchTwitterSearchTool
+)
+
 __all__ = [
     "PredictPrice",
     "TokenHolders",
@@ -64,4 +72,15 @@ __all__ = [
     "start_crypto_powerdata_mcp_auto",
     "CryptoPowerDataMCPServer",
     "get_server_manager",
+
+    # Desearch AI tools
+    "search_ai_data",
+    "search_social_media",
+    "search_academic",
+
+    # Desearch Builtin Tools
+    "DesearchAISearchTool",
+    "DesearchWebSearchTool",
+    "DesearchAcademicSearchTool",
+    "DesearchTwitterSearchTool",
 ]
