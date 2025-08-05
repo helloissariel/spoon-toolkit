@@ -1,16 +1,16 @@
 # Spoon Toolkits - Comprehensive blockchain and cryptocurrency tools
 __version__ = "0.1.0"
 
-from .crypto.predict_price import PredictPrice
-from .crypto.token_holders import TokenHolders
-from .crypto.trading_history import TradingHistory
-from .crypto.uniswap_liquidity import UniswapLiquidity
-from .crypto.wallet_analysis import WalletAnalysis
-from .crypto.price_data import GetTokenPriceTool, Get24hStatsTool, GetKlineDataTool
-from .crypto.price_alerts import PriceThresholdAlertTool, LpRangeCheckTool, SuddenPriceIncreaseTool
-from .crypto.lending_rates import LendingRateMonitorTool
+from .crypto.crypto_data_tools.predict_price import PredictPrice
+from .crypto.crypto_data_tools.token_holders import TokenHolders
+from .crypto.crypto_data_tools.trading_history import TradingHistory
+from .crypto.crypto_data_tools.uniswap_liquidity import UniswapLiquidity
+from .crypto.crypto_data_tools.wallet_analysis import WalletAnalysis
+from .crypto.crypto_data_tools.price_data import GetTokenPriceTool, Get24hStatsTool, GetKlineDataTool
+from .crypto.crypto_data_tools.price_alerts import PriceThresholdAlertTool, LpRangeCheckTool, SuddenPriceIncreaseTool
+from .crypto.crypto_data_tools.lending_rates import LendingRateMonitorTool
 
-from .crypto_powerdata import (
+from .crypto.crypto_powerdata import (
     CryptoPowerDataCEXTool,
     CryptoPowerDataDEXTool,
     CryptoPowerDataIndicatorsTool,
@@ -22,23 +22,7 @@ from .crypto_powerdata import (
     get_server_manager,
 )
 
-from .fluence.fluence_tools import (
-    FluenceListSSHKeysTool,
-    FluenceCreateSSHKeyTool,
-    FluenceDeleteSSHKeyTool,
-    FluenceListVMsTool,
-    FluenceCreateVMTool,
-    FluenceDeleteVMTool,
-    FluencePatchVMTool,
-    FluenceListDefaultImagesTool,
-    FluenceEstimateVMTool,
-    FluenceListBasicConfigurationsTool,
-    FluenceListCountriesTool,
-    FluenceListHardwareTool,
-    SearchFluenceMarketplaceOffers
-)
-
-from .third_web.third_web_tools import (
+from .data_platforms.third_web.third_web_tools import (
     GetContractEventsFromThirdwebInsight,
     GetMultichainTransfersFromThirdwebInsight,
     GetTransactionsTool,
@@ -53,20 +37,6 @@ from .desearch.data_verification import verify_claim, check_fact_accuracy, detec
 from .desearch.multi_source_search import aggregate_search_results, cross_platform_analysis, check_information_consistency
 
 __all__ = [
-    "FluenceListSSHKeysTool",
-    "FluenceCreateSSHKeyTool",
-    "FluenceDeleteSSHKeyTool",
-    "FluenceListVMsTool",
-    "FluenceCreateVMTool",
-    "FluenceDeleteVMTool",
-    "FluencePatchVMTool",
-    "FluenceListDefaultImagesTool",
-    "FluenceEstimateVMTool",
-    "FluenceListBasicConfigurationsTool",
-    "FluenceListCountriesTool",
-    "FluenceListHardwareTool",
-    "SearchFluenceMarketplaceOffers",
-
     "PredictPrice",
     "TokenHolders",
     "TradingHistory",
