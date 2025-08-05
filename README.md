@@ -97,6 +97,7 @@ Provides advanced cryptocurrency market data and technical analysis tools:
 - **DEX Data with Indicators** (`CryptoPowerDataDEXTool`)
   - Fetch candlestick data from decentralized exchanges via OKX DEX API
   - Apply comprehensive technical indicators for on-chain data
+  - **Note**: To use crypto powerdata DEX query functionality, you need to obtain OKX API credentials from [OKX Web3 Developer Portal](https://web3.okx.com/build/dev-portal)
 
 - **Real-time Price Retrieval** (`CryptoPowerDataPriceTool`)
   - Get real-time cryptocurrency prices from both CEX and DEX sources
@@ -238,6 +239,12 @@ export BITQUERY_API_KEY="your_api_key"
 export BITQUERY_CLIENT_ID="your_client_id"
 export BITQUERY_CLIENT_SECRET="your_client_secret"
 
+# OKX API Configuration (for Crypto PowerData DEX queries)
+export OKX_API_KEY="your_okx_api_key"
+export OKX_SECRET_KEY="your_okx_secret_key"
+export OKX_API_PASSPHRASE="your_okx_api_passphrase"
+export OKX_PROJECT_ID="your_okx_project_id"
+
 # Storage Service Configuration
 export AIOZ_ACCESS_KEY="your_access_key"
 export AIOZ_SECRET_KEY="your_secret_key"
@@ -333,12 +340,23 @@ cex_data = await cex_tool.execute(
 )
 print(f"CEX Data with Indicators: {cex_data}")
 
+# Get DEX data with indicators
+dex_tool = CryptoPowerDataDEXTool()
+dex_data = await dex_tool.execute(
+    chain_index="1",  # Ethereum
+    token_address="0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",  # WETH
+    timeframe="1h",
+    limit=100,
+    indicators_config='{"ema": [{"timeperiod": 12}, {"timeperiod": 26}], "rsi": [{"timeperiod": 14}]}'
+)
+print(f"DEX Data with Indicators: {dex_data}")
+
 # Get real-time DEX token price
 price_tool = CryptoPowerDataPriceTool()
 dex_price = await price_tool.execute(
     source="dex",
-    chain_index="1", # Ethereum
-    token_address="0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2" # WETH
+    chain_index="1",  # Ethereum
+    token_address="0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"  # WETH
 )
 print(f"DEX Token Price: {dex_price}")
 ```
