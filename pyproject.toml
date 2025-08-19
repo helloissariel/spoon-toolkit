@@ -35,6 +35,10 @@ dependencies = [
     "pydantic-settings>=2.0.0",
     "fastapi>=0.100.0",
     "uvicorn>=0.20.0",
+    "neo-mamba==2.7.0",
+
+    # Github GraphQL dependencies
+    "gql>=3.5.0",
 
     # Note: spoon-ai-sdk is required but not listed here to avoid circular dependency
     # Install spoon-ai-sdk first: pip install spoon-ai-sdk

@@ -252,6 +252,9 @@ export FOUREVERLAND_ACCESS_KEY="your_access_key"
 export FOUREVERLAND_SECRET_KEY="your_secret_key"
 export OORT_ACCESS_KEY="your_access_key"
 export OORT_SECRET_KEY="your_secret_key"
+
+# GitHub API Configuration
+export GITHUB_TOKEN="your_github_personal_access_token"
 ```
 
 ### 🔑 API Setup Guides
@@ -261,6 +264,7 @@ For detailed setup instructions for specific services:
 - **Bitquery API**: See [docs/BITQUERY_SETUP.md](docs/BITQUERY_SETUP.md) for comprehensive setup instructions
 - **GoPlusLabs**: Visit [https://gopluslabs.io/](https://gopluslabs.io/) to get your API key
 - **Chainbase**: Visit [https://chainbase.com/](https://chainbase.com/) to get your API key
+- **GitHub** Visit [https://github.com/settings/tokens](https://github.com/settings/tokens) to get your API key
 
 > **⚠️ Important**: If you encounter authentication errors when using any tools, the system will provide detailed instructions on where to obtain the required API credentials and how to configure them.
 
