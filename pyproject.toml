@@ -19,8 +19,8 @@ classifiers = [
 dependencies = [
     # Core dependencies for spoon-toolkits functionality
     "requests>=2.32.3",
-    "aiohttp==3.10.5",
-    "fastmcp==2.2.5",
+    "aiohttp>=3.10.5",
+    "fastmcp>=2.12.0",
     "pandas>=1.0.0",
     "httpx>=0.28.1",
     "pydantic>=2.10.4",
@@ -35,7 +35,7 @@ dependencies = [
     "pydantic-settings>=2.0.0",
     "fastapi>=0.100.0",
     "uvicorn>=0.20.0",
-    "neo-mamba==2.7.0",
+    "neo-mamba >= 3.0.1",
 
     # Github GraphQL dependencies
     "gql>=3.5.0",
