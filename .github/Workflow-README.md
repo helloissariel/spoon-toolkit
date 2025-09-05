@@ -14,12 +14,13 @@ This directory contains GitHub Actions workflows for automated testing, building
   - No testing - focuses on build verification only
 
 ### 2. Release Workflow (`release.yml`)
-- **Trigger**: Push of version tags (e.g., `v1.2.3`)
-- **Purpose**: Automatically publish to PyPI and create GitHub releases
+- **Trigger**: GitHub release published
+- **Purpose**: Automatically publish to PyPI using trusted publishing
 - **Features**:
-  - Build package distribution
-  - Upload to PyPI using API token
-  - Create GitHub release with changelog
+  - Separated build and publish jobs
+  - Trusted publishing with PyPI
+  - Environment protection for secure publishing
+  - Official PyPI publishing action
 
 ### 3. Version Bump Workflow (`version-bump.yml`)
 - **Trigger**: Manual workflow dispatch
@@ -32,13 +33,16 @@ This directory contains GitHub Actions workflows for automated testing, building
 
 ## Setup Instructions
 
-### 1. PyPI API Token Setup
+### 1. PyPI Trusted Publishing Setup
+
+For trusted publishing, you need to configure PyPI to trust your GitHub repository:
 
 1. Go to [PyPI](https://pypi.org/) and log in
-2. Go to Account Settings → API tokens
-3. Create a new API token with scope for your project
-4. In your GitHub repository, go to Settings → Secrets and variables → Actions
-5. Add a new repository secret named `PYPI_API_TOKEN` with your token value
+2. Go to Account Settings → Publishing
+3. Add your GitHub repository as a trusted publisher
+4. Configure the environment name as `pypi` in your repository settings
+
+**Note**: No API tokens needed for trusted publishing!
 
 ### 2. Repository Settings
 
@@ -61,11 +65,18 @@ Set up branch protection for `main` branch:
 1. **Version Bump**: Use the Version Bump workflow to increment version
    - Go to Actions → Version Bump and Tag → Run workflow
    - Choose version type (patch/minor/major) or enter custom version
+   - **Note**: Even if you specify the same version, it will still create a commit and tag
 
-2. **Automatic Publishing**: When a version tag is pushed, the release workflow automatically:
+2. **Create GitHub Release**: After version bump, create a GitHub release
+   - Go to GitHub Releases → Create new release
+   - Use the tag created by the version bump workflow
+   - Publish the release
+
+3. **Automatic Publishing**: When the GitHub release is published, the workflow automatically:
    - Builds the package
-   - Publishes to PyPI
-   - Creates a GitHub release
+   - Publishes to PyPI using trusted publishing
+   - **Guaranteed**: Package will be published even if version didn't change
+   - No manual PyPI token management needed
 
 ### Manual Version Management
 
@@ -89,13 +100,17 @@ If you prefer manual version management:
 
 ### Release Workflow
 ```yaml
-# Runs on version tags
+# Runs on GitHub release published
+# Job 1: Build distributions
 - Checkout code
 - Setup Python 3.11
-- Install build tools
 - Build package (sdist + wheel)
-- Upload to PyPI
-- Create GitHub release
+- Upload build artifacts
+
+# Job 2: Publish to PyPI (trusted publishing)
+- Download build artifacts
+- Publish to PyPI using trusted publishing
+- Environment protection enabled
 ```
 
 ### Version Bump Workflow
