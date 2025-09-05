@@ -22,8 +22,7 @@ class GetAddressCountTool(BaseTool):
     async def execute(self, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetAddressCount", {})
-            result = provider._handle_response(response)
+            result = await provider.get_address_count()
             return ToolResult(output=f"Address count: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
@@ -51,9 +50,7 @@ class GetAddressInfoTool(BaseTool):
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            validated_address = provider._validate_address(address)
-            response = provider._make_request("GetAddressInfoByAddress", {"Address": validated_address})
-            result = provider._handle_response(response)
+            result = await provider.get_address_info(address)
             return ToolResult(output=f"Address info: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
@@ -86,6 +83,8 @@ class GetActiveAddressesTool(BaseTool):
         try:
             provider = get_provider(network)
             result = await provider.get_active_addresses(days)
+            if not result:
+                return ToolResult(output="Active addresses data not available with current neo-mamba implementation")
             return ToolResult(output=f"Active addresses: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
@@ -119,11 +118,18 @@ class GetTagByAddressesTool(BaseTool):
             # Convert string to list if needed
             if isinstance(addresses, str):
                 addresses = [addr.strip() for addr in addresses.split(",")]
-            
-            validated_addresses = [provider._validate_address(addr) for addr in addresses]
-            response = provider._make_request("GetTagByAddresses", {"Addresses": validated_addresses})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Address tags: {result}")
+
+            # Note: neo-mamba doesn't have a direct GetTagByAddresses method
+            # For now, we'll get basic balance information for each address
+            results = {}
+            for addr in addresses:
+                try:
+                    addr_info = await provider.get_address_info(addr)
+                    results[addr] = addr_info
+                except Exception as e:
+                    results[addr] = {"error": str(e)}
+
+            return ToolResult(output=f"Address information: {results}")
         except Exception as e:
             return ToolResult(error=str(e))
 
@@ -155,11 +161,32 @@ class GetTotalSentAndReceivedTool(BaseTool):
         try:
             provider = get_provider(network)
             validated_address = provider._validate_address(address)
-            response = provider._make_request("GetTotalSentAndReceived", {
-                "ContractHash": contract_hash,
-                "Address": validated_address
-            })
-            result = provider._handle_response(response)
+
+            # Note: neo-mamba doesn't have GetTotalSentAndReceived method
+            # We'll use get_nep17_transfers to get transfer history
+            transfers = await provider.rpc_client.get_nep17_transfers(validated_address)
+
+            # Calculate totals from transfer history
+            sent_total = 0
+            received_total = 0
+
+            if transfers and 'sent' in transfers:
+                for transfer in transfers['sent']:
+                    if transfer.get('contract') == contract_hash:
+                        sent_total += int(transfer.get('amount', 0))
+
+            if transfers and 'received' in transfers:
+                for transfer in transfers['received']:
+                    if transfer.get('contract') == contract_hash:
+                        received_total += int(transfer.get('amount', 0))
+
+            result = {
+                "address": address,
+                "contract_hash": contract_hash,
+                "sent": sent_total,
+                "received": received_total
+            }
+
             return ToolResult(output=f"Total sent and received: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
@@ -188,9 +215,10 @@ class GetRawTransactionByAddressTool(BaseTool):
         try:
             provider = get_provider(network)
             validated_address = provider._validate_address(address)
-            response = provider._make_request("GetRawTransactionByAddress", {"Address": validated_address})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Raw transaction data: {result}")
+            # Note: neo-mamba doesn't have GetRawTransactionByAddress method
+            # We'll use get_nep17_transfers as an alternative
+            transfers = await provider.rpc_client.get_nep17_transfers(validated_address)
+            return ToolResult(output=f"Transfer data: {transfers}")
         except Exception as e:
             return ToolResult(error=str(e))
 
@@ -218,9 +246,9 @@ class GetTransferByAddressTool(BaseTool):
         try:
             provider = get_provider(network)
             validated_address = provider._validate_address(address)
-            response = provider._make_request("GetTransferByAddress", {"Address": validated_address})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Transfer data: {result}")
+            # Use neo-mamba's get_nep17_transfers method
+            transfers = await provider.rpc_client.get_nep17_transfers(validated_address)
+            return ToolResult(output=f"Transfer data: {transfers}")
         except Exception as e:
             return ToolResult(error=str(e))
 
@@ -248,8 +276,8 @@ class GetNep11OwnedByAddressTool(BaseTool):
         try:
             provider = get_provider(network)
             validated_address = provider._validate_address(address)
-            response = provider._make_request("GetNep11OwnedByAddress", {"Address": validated_address})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"NEP-11 tokens owned: {result}")
+            # Note: neo-mamba doesn't have a direct NEP-11 method
+            # NEP-11 tokens would need to be queried through contract interactions
+            return ToolResult(output="NEP-11 token ownership query not available with current neo-mamba implementation")
         except Exception as e:
-            return ToolResult(error=str(e)) 
+            return ToolResult(error=str(e))

@@ -22,8 +22,7 @@ class GetBlockCountTool(BaseTool):
     async def execute(self, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetBlockCount", {})
-            result = provider._handle_response(response)
+            result = await provider.get_block_count()
             return ToolResult(output=f"Block count: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
@@ -51,8 +50,7 @@ class GetBlockByHashTool(BaseTool):
     async def execute(self, block_hash: str, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetBlockByHash", {"BlockHash": block_hash})
-            result = provider._handle_response(response)
+            result = await provider.get_block_info(block_hash)
             return ToolResult(output=f"Block info: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
@@ -81,8 +79,7 @@ class GetBlockByHeightTool(BaseTool):
     async def execute(self, block_height: int, network: str = "testnet") -> ToolResult:
         try:
             provider = get_provider(network)
-            response = provider._make_request("GetBlockByHeight", {"BlockHeight": block_height})
-            result = provider._handle_response(response)
+            result = await provider.get_block_by_height(block_height)
             return ToolResult(output=f"Block info: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
@@ -164,4 +161,4 @@ class GetBlockRewardByHashTool(BaseTool):
             result = provider._handle_response(response)
             return ToolResult(output=f"Block reward info: {result}")
         except Exception as e:
-            return ToolResult(error=str(e)) 
+            return ToolResult(error=str(e))
