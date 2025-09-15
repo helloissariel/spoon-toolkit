@@ -42,7 +42,7 @@ from .data_platforms.desearch.builtin_tools import (
 
 from .crypto.neo import (
     # Address tools (8)
-    GetAddressCountTool,    
+    GetAddressCountTool,
     GetAddressInfoTool,
     GetActiveAddressesTool,
     GetTagByAddressesTool,
@@ -57,7 +57,7 @@ from .crypto.neo import (
     GetAssetInfoByNameTool,
     GetAssetsInfoByUserAddressTool,
     GetAssetInfoByAssetAndAddressTool,
-    
+
     # Block tools (6)
     GetBlockCountTool,
     GetBlockByHashTool,
@@ -109,7 +109,7 @@ from .crypto.neo import (
     GetNep17TransferByTransactionHashTool,
     GetNep17TransferCountByAddressTool,
 
-    # Smart Contract Call tools (3) 
+    # Smart Contract Call tools (3)
     InvokeContractTool,
     TestInvokeContractTool,
     GetContractStateTool,
@@ -117,16 +117,16 @@ from .crypto.neo import (
     # Application Log and State tools (2)
     GetApplicationLogTool,
     GetApplicationStateTool,
-    
+
     # Statistics and Monitoring tools (4)
     GetNetworkStatisticsTool,
     GetTransactionStatisticsTool,
     GetAddressStatisticsTool,
     GetContractStatisticsTool,
-    
+
     # Governance tools (1)
     GetCommitteeInfoTool,
-    
+
     # Utility tools (3)
     ValidateAddressTool,
     ConvertAddressTool,
@@ -135,6 +135,16 @@ from .crypto.neo import (
     # Provider
     NeoProvider,
     get_provider,
+)
+
+# EVM tools
+from .crypto.evm import (
+    EvmTransferTool,
+    EvmSwapTool,
+    EvmBridgeTool,
+    EvmErc20TransferTool,
+    EvmBalanceTool,
+    EvmSwapQuoteTool,
 )
 
 
@@ -192,14 +202,14 @@ __all__ = [
     "GetRawTransactionByAddressTool",
     "GetTransferByAddressTool",
     "GetNep11OwnedByAddressTool",
-    
+
     # Neo Asset tools (5)
     "GetAssetCountTool",
     "GetAssetInfoByHashTool",
     "GetAssetInfoByNameTool",
     "GetAssetsInfoByUserAddressTool",
     "GetAssetInfoByAssetAndAddressTool",
-    
+
     # Neo Block tools (6)
     "GetBlockCountTool",
     "GetBlockByHashTool",
@@ -215,7 +225,7 @@ __all__ = [
     "GetVerifiedContractByContractHashTool",
     "GetVerifiedContractTool",
     "GetSourceCodeByContractHashTool",
-    
+
     # Neo Transaction tools (8)
     "GetTransactionCountTool",
     "GetRawTransactionByHashTool",
@@ -225,7 +235,7 @@ __all__ = [
     "GetTransferByBlockHashTool",
     "GetTransferByBlockHeightTool",
     "GetTransferEventByTransactionHashTool",
-    
+
     # Neo Voting tools (9)
     "GetCandidateCountTool",
     "GetCandidateByAddressTool",
@@ -250,22 +260,22 @@ __all__ = [
     "GetNep17TransferByContractHashTool",
     "GetNep17TransferByTransactionHashTool",
     "GetNep17TransferCountByAddressTool",
-    
+
     # Neo Smart Contract Call tools (3)
     "InvokeContractTool",
     "TestInvokeContractTool",
     "GetContractStateTool",
-    
+
     # Neo Application Log and State tools (2)
     "GetApplicationLogTool",
     "GetApplicationStateTool",
-    
+
     # Neo Statistics and Monitoring tools (4)
     "GetNetworkStatisticsTool",
     "GetTransactionStatisticsTool",
     "GetAddressStatisticsTool",
     "GetContractStatisticsTool",
-    
+
     # Neo Governance tools (1)
     "GetCommitteeInfoTool",
 
@@ -273,8 +283,16 @@ __all__ = [
     "ValidateAddressTool",
     "ConvertAddressTool",
     "GetNetworkInfoTool",
-    
+
     # Neo Provider
     "NeoProvider",
     "get_provider",
+
+    # EVM Tools
+    "EvmTransferTool",
+    "EvmSwapTool",
+    "EvmBridgeTool",
+    "EvmErc20TransferTool",
+    "EvmBalanceTool",
+    "EvmSwapQuoteTool",
 ]
