@@ -39,6 +39,11 @@ class EvmSwapQuoteTool(BaseTool):
                 "type": "number",
                 "description": "Optional slippage (e.g., 0.005 for 0.5%) used for LiFi",
                 "default": 0.005
+            },
+            "taker_address": {
+                "type": "string",
+                "description": "Optional taker address for Bebop quotes. Uses default if not provided.",
+                "default": None
             }
         },
         "required": ["from_token", "to_token", "amount"],
@@ -51,6 +56,7 @@ class EvmSwapQuoteTool(BaseTool):
     amount: Optional[str] = Field(default=None)
     aggregator: str = Field(default="both")
     slippage: float = Field(default=0.005)
+    taker_address: Optional[str] = Field(default=None)
 
     _BEBOP_CHAIN_MAP: Dict[int, str] = {
         1: "ethereum",
@@ -70,6 +76,7 @@ class EvmSwapQuoteTool(BaseTool):
         amount: Optional[str] = None,
         aggregator: Optional[str] = None,
         slippage: Optional[float] = None,
+        taker_address: Optional[str] = None,
     ) -> ToolResult:
         try:
             rpc_url = rpc_url or self.rpc_url or os.getenv("EVM_PROVIDER_URL") or os.getenv("RPC_URL")
@@ -79,6 +86,7 @@ class EvmSwapQuoteTool(BaseTool):
             amount = amount or self.amount
             aggregator = (aggregator or self.aggregator or "both").lower()
             slippage = slippage if slippage is not None else self.slippage
+            taker_address = taker_address or self.taker_address
 
             if not from_token or not to_token or not amount:
                 return ToolResult(error="Missing from_token/to_token/amount")
@@ -125,7 +133,8 @@ class EvmSwapQuoteTool(BaseTool):
                 chain_key = self._BEBOP_CHAIN_MAP.get(chain_id)
                 if chain_key:
                     try:
-                        bebop = self._get_bebop_quote(chain_key, from_token, to_token, sell_amount)
+                        bebop = self._get_bebop_quote(chain_key, from_token, to_token, sell_amount, taker_address)
+                        #bebop api missing taker address
                         quotes.append(bebop)
                     except Exception as e:
                         logger.warning(f"Bebop quote failed: {e}")
@@ -160,7 +169,7 @@ class EvmSwapQuoteTool(BaseTool):
             logger.error(f"EvmSwapQuoteTool error: {e}")
             return ToolResult(error=f"Swap quote failed: {str(e)}")
 
-    def _get_bebop_quote(self, chain_key: str, from_token: str, to_token: str, sell_amount: int) -> Dict[str, Any]:
+    def _get_bebop_quote(self, chain_key: str, from_token: str, to_token: str, sell_amount: int, taker_address: str = None) -> Dict[str, Any]:
         url = f"https://api.bebop.xyz/router/{chain_key}/v1/quote"
         params = {
             "sell_tokens": from_token,
@@ -171,6 +180,10 @@ class EvmSwapQuoteTool(BaseTool):
             "gasless": "false",
             "source": "spoonai",
         }
+
+        # Add taker_address if provided
+        if taker_address:
+            params["taker_address"] = taker_address    
         resp = requests.get(url, params=params, timeout=30)
         if resp.status_code != 200:
             raise RuntimeError(f"Bebop API error: {resp.status_code} {resp.text}")

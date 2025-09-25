@@ -217,16 +217,19 @@ class EvmBridgeTool(BaseTool):
                         return ToolResult(error=f"Approval failed: {tx_hash.hex()}")
 
             # Execute bridge tx
+            # Safe conversion for hex values
+            safe_int_convert = lambda value, default=0: int(value) if value else default
+
             send_tx = {
                 "to": Web3.to_checksum_address(step_tx.get("to")),
                 "from": account.address,
-                "value": int(step_tx.get("value") or 0),
+                "value": safe_int_convert(step_tx.get("value")),
                 "data": step_tx.get("data", "0x"),
                 "nonce": w3.eth.get_transaction_count(account.address),
                 "chainId": w3.eth.chain_id,
             }
             try:
-                suggested_gas = int(step_tx.get("gasLimit") or 0)
+                suggested_gas = safe_int_convert(step_tx.get("gasLimit"))
             except Exception:
                 suggested_gas = 0
             try:
@@ -238,7 +241,7 @@ class EvmBridgeTool(BaseTool):
             else:
                 try:
                     if step_tx.get("gasPrice"):
-                        send_tx["gasPrice"] = int(step_tx["gasPrice"])
+                        send_tx["gasPrice"] = safe_int_convert(step_tx["gasPrice"])
                     else:
                         send_tx["gasPrice"] = w3.eth.gas_price
                 except Exception:
