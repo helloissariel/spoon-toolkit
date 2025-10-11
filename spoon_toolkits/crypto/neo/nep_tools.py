@@ -33,47 +33,18 @@ class GetNep11BalanceTool(BaseTool):
 
     async def execute(self, address: str, asset_hash: str, token_id: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            validated_address = provider._validate_address(address)
-            response = provider._make_request("GetNep11Balance", {
+            async with get_provider(network) as provider:
+                validated_address = await provider._validate_address(address)
+                response = provider._make_request("GetNep11BalanceByContractHashAddressTokenId", {
                 "ContractHash": asset_hash,
                 "Address": validated_address,
                 "TokenId": token_id
             })
-            result = provider._handle_response(response)
-            return ToolResult(output=f"NEP-11 balance: {result}")
+                result = provider._handle_response(response)
+                return ToolResult(output=f"NEP-11 balance: {result}")
         except Exception as e:
-            return ToolResult(error=str(e))
+                return ToolResult(error=str(e))
 
-class GetNep11OwnedByAddressTool(BaseTool):
-    name: str = "get_nep11_owned_by_address"
-    description: str = "Get all NEP-11 tokens (NFTs) owned by a specific address on Neo blockchain. Useful when you need to check NFT holdings or analyze NFT ownership for a specific address. Returns a JSON object with NFT token details."
-    parameters: dict = {
-        "type": "object",
-        "properties": {
-            "address": {
-                "type": "string",
-                "description": "Neo address, supports standard format and script hash format (e.g., NiEtVMWVYgpXrWkRTMwRaMJtJ41gD3912N, 0xaad8073e6df9caaf6abc0749250eb0b800c0e6f4)"
-            },
-            "network": {
-                "type": "string",
-                "description": "Neo network type, must be 'mainnet' or 'testnet'",
-                "enum": ["mainnet", "testnet"],
-                "default": "testnet"
-            }
-        },
-        "required": ["address"]
-    }
-
-    async def execute(self, address: str, network: str = "testnet") -> ToolResult:
-        try:
-            provider = get_provider(network)
-            validated_address = provider._validate_address(address)
-            response = provider._make_request("GetNep11OwnedByAddress", {"Address": validated_address})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"NEP-11 tokens: {result}")
-        except Exception as e:
-            return ToolResult(error=str(e))
 
 class GetNep11ByAddressAndHashTool(BaseTool):
     name: str = "get_nep11_by_address_and_hash"
@@ -101,16 +72,16 @@ class GetNep11ByAddressAndHashTool(BaseTool):
 
     async def execute(self, address: str, asset_hash: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            validated_address = provider._validate_address(address)
-            response = provider._make_request("GetNep11ByAddressAndHash", {
+            async with get_provider(network) as provider:
+                validated_address = await provider._validate_address(address)
+                response = await provider._make_request("GetNep11OwnedByContractHashAddress", {
                 "Address": validated_address,
                 "ContractHash": asset_hash
             })
-            result = provider._handle_response(response)
-            return ToolResult(output=f"NEP-11 tokens: {result}")
+                result = provider._handle_response(response)
+                return ToolResult(output=f"NEP-11 tokens: {result}")
         except Exception as e:
-            return ToolResult(error=str(e))
+                return ToolResult(error=str(e))
 
 class GetNep11TransferByAddressTool(BaseTool):
     name: str = "get_nep11_transfer_by_address"
@@ -134,13 +105,13 @@ class GetNep11TransferByAddressTool(BaseTool):
 
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            validated_address = provider._validate_address(address)
-            response = provider._make_request("GetNep11TransferByAddress", {"Address": validated_address})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"NEP-11 transfers: {result}")
+            async with get_provider(network) as provider:
+                validated_address = await provider._validate_address(address)
+                response = await provider._make_request("GetNep11TransferByAddress", {"Address": validated_address})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"NEP-11 transfers: {result}")
         except Exception as e:
-            return ToolResult(error=str(e))
+                return ToolResult(error=str(e))
 
 class GetNep11TransferByBlockHeightTool(BaseTool):
     name: str = "get_nep11_transfer_by_block_height"
@@ -164,10 +135,10 @@ class GetNep11TransferByBlockHeightTool(BaseTool):
 
     async def execute(self, block_height: int, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetNep11TransferByBlockHeight", {"BlockHeight": block_height})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"NEP-11 transfers: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetNep11TransferByBlockHeight", {"BlockHeight": block_height})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"NEP-11 transfers: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
@@ -193,12 +164,12 @@ class GetNep11TransferByTransactionHashTool(BaseTool):
 
     async def execute(self, transaction_hash: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetNep11TransferByTransactionHash", {"TransactionHash": transaction_hash})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"NEP-11 transfers: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetNep11TransferByTransactionHash", {"TransactionHash": transaction_hash})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"NEP-11 transfers: {result}")
         except Exception as e:
-            return ToolResult(error=str(e))
+                return ToolResult(error=str(e))
 
 class GetNep11TransferCountByAddressTool(BaseTool):
     name: str = "get_nep11_transfer_count_by_address"
@@ -222,13 +193,13 @@ class GetNep11TransferCountByAddressTool(BaseTool):
 
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            validated_address = provider._validate_address(address)
-            response = provider._make_request("GetNep11TransferCountByAddress", {"Address": validated_address})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"NEP-11 transfer count: {result}")
+            async with get_provider(network) as provider:
+                validated_address = await provider._validate_address(address)
+                response = await provider._make_request("GetNep11TransferCountByAddress", {"Address": validated_address})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"NEP-11 transfer count: {result}")
         except Exception as e:
-            return ToolResult(error=str(e))
+                return ToolResult(error=str(e))
 
 class GetNep17TransferByAddressTool(BaseTool):
     name: str = "get_nep17_transfer_by_address"
@@ -252,13 +223,13 @@ class GetNep17TransferByAddressTool(BaseTool):
 
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            validated_address = provider._validate_address(address)
-            response = provider._make_request("GetNep17TransferByAddress", {"Address": validated_address})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"NEP-17 transfers: {result}")
+            async with get_provider(network) as provider:
+                validated_address = await provider._validate_address(address)
+                response = await provider._make_request("GetNep17TransferByAddress", {"Address": validated_address})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"NEP-17 transfers: {result}")
         except Exception as e:
-            return ToolResult(error=str(e))
+                return ToolResult(error=str(e))
 
 class GetNep17TransferByBlockHeightTool(BaseTool):
     name: str = "get_nep17_transfer_by_block_height"
@@ -282,12 +253,12 @@ class GetNep17TransferByBlockHeightTool(BaseTool):
 
     async def execute(self, block_height: int, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetNep17TransferByBlockHeight", {"BlockHeight": block_height})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"NEP-17 transfers: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetNep17TransferByBlockHeight", {"BlockHeight": block_height})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"NEP-17 transfers: {result}")
         except Exception as e:
-            return ToolResult(error=str(e))
+                return ToolResult(error=str(e))
 
 class GetNep17TransferByContractHashTool(BaseTool):
     name: str = "get_nep17_transfer_by_contract_hash"
@@ -311,12 +282,12 @@ class GetNep17TransferByContractHashTool(BaseTool):
 
     async def execute(self, contract_hash: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetNep17TransferByContractHash", {"ContractHash": contract_hash})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"NEP-17 transfers: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetNep17TransferByContractHash", {"ContractHash": contract_hash})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"NEP-17 transfers: {result}")
         except Exception as e:
-            return ToolResult(error=str(e))
+                return ToolResult(error=str(e))
 
 class GetNep17TransferByTransactionHashTool(BaseTool):
     name: str = "get_nep17_transfer_by_transaction_hash"
@@ -340,12 +311,12 @@ class GetNep17TransferByTransactionHashTool(BaseTool):
 
     async def execute(self, transaction_hash: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetNep17TransferByTransactionHash", {"TransactionHash": transaction_hash})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"NEP-17 transfers: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetNep17TransferByTransactionHash", {"TransactionHash": transaction_hash})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"NEP-17 transfers: {result}")
         except Exception as e:
-            return ToolResult(error=str(e))
+                return ToolResult(error=str(e))
 
 class GetNep17TransferCountByAddressTool(BaseTool):
     name: str = "get_nep17_transfer_count_by_address"
@@ -369,10 +340,10 @@ class GetNep17TransferCountByAddressTool(BaseTool):
 
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            validated_address = provider._validate_address(address)
-            response = provider._make_request("GetNep17TransferCountByAddress", {"Address": validated_address})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"NEP-17 transfer count: {result}")
+            async with get_provider(network) as provider:
+                validated_address = await provider._validate_address(address)
+                response = await provider._make_request("GetNep17TransferCountByAddress", {"Address": validated_address})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"NEP-17 transfer count: {result}")
         except Exception as e:
-            return ToolResult(error=str(e)) 
+                return ToolResult(error=str(e)) 

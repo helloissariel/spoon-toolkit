@@ -26,25 +26,25 @@ class GetApplicationLogTool(BaseTool):
 
     async def execute(self, transaction_hash: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetApplicationLog", {
-                "transaction_hash": transaction_hash
-            })
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Application log: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetApplicationLogByTransactionHash", {
+                    "TransactionHash": transaction_hash
+                })
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Application log: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
 
 class GetApplicationStateTool(BaseTool):
     name: str = "get_application_state"
-    description: str = "Get current application state for Neo blockchain applications. Useful when you need to check application deployment status or verify application state information. Returns application state information."
+    description: str = "Gets the applicationlog by blockhash."
     parameters: dict = {
         "type": "object",
         "properties": {
-            "application_hash": {
+            "block_hash": {
                 "type": "string",
-                "description": "Application hash, must be valid hexadecimal format (e.g., 0x1234567890abcdef)"
+                "description": "blockhash of a transaction, must be valid hexadecimal format (e.g., 0x1234567890abcdef)"
             },
             "network": {
                 "type": "string",
@@ -53,16 +53,16 @@ class GetApplicationStateTool(BaseTool):
                 "default": "testnet"
             }
         },
-        "required": ["application_hash"]
+        "required": ["block_hash"]
     }
 
-    async def execute(self, application_hash: str, network: str = "testnet") -> ToolResult:
+    async def execute(self, block_hash: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetApplicationState", {
-                "application_hash": application_hash
-            })
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Application state: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetApplicationLogByBlockHash", {
+                    "BlockHash": block_hash
+                })
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Application state: {result}")
         except Exception as e:
             return ToolResult(error=str(e)) 

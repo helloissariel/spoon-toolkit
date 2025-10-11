@@ -21,10 +21,11 @@ class GetContractCountTool(BaseTool):
 
     async def execute(self, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetContractCount", {})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Contract count: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetContractCount", {})
+                result = await provider._handle_response(response)
+                
+                return ToolResult(output=f"Contract count: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
@@ -50,10 +51,10 @@ class GetContractByHashTool(BaseTool):
 
     async def execute(self, contract_hash: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetContractByHash", {"ContractHash": contract_hash})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Contract info: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetContractByContractHash", {"ContractHash": contract_hash})
+                result = await provider._handle_response(response)
+                return ToolResult(output=f"Contract info: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
@@ -79,10 +80,10 @@ class GetContractListByNameTool(BaseTool):
 
     async def execute(self, contract_name: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetContractListByName", {"ContractName": contract_name})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Contract list: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetContractListByName", {"Name": contract_name})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Contract list: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
@@ -108,10 +109,10 @@ class GetVerifiedContractByContractHashTool(BaseTool):
 
     async def execute(self, contract_hash: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetVerifiedContractByContractHash", {"ContractHash": contract_hash})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Verified contract info: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetVerifiedContractByContractHash", {"ContractHash": contract_hash})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Verified contract info: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
@@ -128,43 +129,15 @@ class GetVerifiedContractTool(BaseTool):
                 "default": "testnet"
             }
         },
-        "required": []
+        "required": ["skip","limit"]
     }
 
-    async def execute(self, network: str = "testnet") -> ToolResult:
+    async def execute(self, skip,limit, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetVerifiedContract", {})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Verified contracts: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetVerifiedContracts", {"Skip": skip,"Limit":limit})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Verified contracts: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
-class GetSourceCodeByContractHashTool(BaseTool):
-    name: str = "get_source_code_by_contract_hash"
-    description: str = "Get smart contract source code by contract hash on Neo blockchain. Useful when you need to analyze contract logic or verify contract implementation. Returns source code information."
-    parameters: dict = {
-        "type": "object",
-        "properties": {
-            "contract_hash": {
-                "type": "string",
-                "description": "Contract hash, must be valid hexadecimal format (e.g., 0x1234567890abcdef)"
-            },
-            "network": {
-                "type": "string",
-                "description": "Neo network type, must be 'mainnet' or 'testnet'",
-                "enum": ["mainnet", "testnet"],
-                "default": "testnet"
-            }
-        },
-        "required": ["contract_hash"]
-    }
-
-    async def execute(self, contract_hash: str, network: str = "testnet") -> ToolResult:
-        try:
-            provider = get_provider(network)
-            response = provider._make_request("GetSourceCodeByContractHash", {"ContractHash": contract_hash})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Source code: {result}")
-        except Exception as e:
-            return ToolResult(error=str(e)) 

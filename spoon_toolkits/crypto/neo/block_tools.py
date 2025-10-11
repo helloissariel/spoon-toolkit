@@ -21,9 +21,9 @@ class GetBlockCountTool(BaseTool):
 
     async def execute(self, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            result = await provider.get_block_count()
-            return ToolResult(output=f"Block count: {result}")
+            async with get_provider(network) as provider:
+                result = await provider.get_block_count()
+                return ToolResult(output=f"Block count: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
@@ -49,9 +49,9 @@ class GetBlockByHashTool(BaseTool):
 
     async def execute(self, block_hash: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            result = await provider.get_block_info(block_hash)
-            return ToolResult(output=f"Block info: {result}")
+            async with get_provider(network) as provider:
+                result = await provider.get_block_info(block_hash)
+                return ToolResult(output=f"Block info: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
@@ -78,9 +78,9 @@ class GetBlockByHeightTool(BaseTool):
 
     async def execute(self, block_height: int, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            result = await provider.get_block_by_height(block_height)
-            return ToolResult(output=f"Block info: {result}")
+            async with get_provider(network) as provider:
+                result = await provider.get_block_by_height(block_height)
+                return ToolResult(output=f"Block info: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
@@ -102,12 +102,12 @@ class GetBestBlockHashTool(BaseTool):
 
     async def execute(self, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetBestBlockHash", {})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Best block hash: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetBestBlockHash", [])
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Best block hash: {result}")
         except Exception as e:
-            return ToolResult(error=str(e))
+                return ToolResult(error=str(e))
 
 class GetRecentBlocksInfoTool(BaseTool):
     name: str = "get_recent_blocks_info"
@@ -122,17 +122,17 @@ class GetRecentBlocksInfoTool(BaseTool):
                 "default": "testnet"
             }
         },
-        "required": []
+        "required": ["limit"]
     }
 
-    async def execute(self, network: str = "testnet") -> ToolResult:
+    async def execute(self, limit: int,network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetRecentBlocksInfo", {})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Recent blocks info: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetBlockInfoList", {Limit:limit})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Recent blocks info: {result}")
         except Exception as e:
-            return ToolResult(error=str(e))
+                return ToolResult(error=str(e))
 
 class GetBlockRewardByHashTool(BaseTool):
     name: str = "get_block_reward_by_hash"
@@ -156,9 +156,9 @@ class GetBlockRewardByHashTool(BaseTool):
 
     async def execute(self, block_hash: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetBlockRewardByHash", {"BlockHash": block_hash})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Block reward info: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetBlockRewardByBlockHash", {"BlockHash": block_hash})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Block reward info: {result}")
         except Exception as e:
-            return ToolResult(error=str(e))
+                return ToolResult(error=str(e))

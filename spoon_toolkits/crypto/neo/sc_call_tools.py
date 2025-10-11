@@ -1,102 +1,11 @@
 """Smart Contract Call Tools for Neo Blockchain"""
-
 from spoon_ai.tools.base import BaseTool, ToolResult
 from .base import get_provider
 
 
-class InvokeContractTool(BaseTool):
-    name: str = "invoke_contract"
-    description: str = "Execute smart contract methods on Neo blockchain. Useful when you need to execute smart contract functions or interact with deployed contracts on the Neo blockchain. Returns the execution result from the contract."
-    parameters: dict = {
-        "type": "object",
-        "properties": {
-            "contract_hash": {
-                "type": "string",
-                "description": "Contract hash, must be valid hexadecimal format (e.g., 0x1234567890abcdef)"
-            },
-            "method": {
-                "type": "string", 
-                "description": "Method name to invoke"
-            },
-            "params": {
-                "type": "array",
-                "description": "Method parameters list, provide according to contract method requirements",
-                "items": {
-                    "type": "string"
-                }
-            },
-            "network": {
-                "type": "string",
-                "description": "Neo network type, must be 'mainnet' or 'testnet'",
-                "enum": ["mainnet", "testnet"],
-                "default": "testnet"
-            }
-        },
-        "required": ["contract_hash", "method"]
-    }
-
-    async def execute(self, contract_hash: str, method: str, params: list = None, network: str = "testnet") -> ToolResult:
-        try:
-            provider = get_provider(network)
-            response = provider._make_request("InvokeContract", {
-                "contract_hash": contract_hash,
-                "method": method,
-                "params": params or []
-            })
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Contract invocation result: {result}")
-        except Exception as e:
-            return ToolResult(error=str(e))
-
-
-class TestInvokeContractTool(BaseTool):
-    name: str = "test_invoke_contract"
-    description: str = "Simulate smart contract method calls on Neo blockchain without executing transactions. Useful when you need to simulate contract calls or verify contract function behavior without executing transactions. Returns the simulated execution result."
-    parameters: dict = {
-        "type": "object",
-        "properties": {
-            "contract_hash": {
-                "type": "string",
-                "description": "Contract hash, must be valid hexadecimal format (e.g., 0x1234567890abcdef)"
-            },
-            "method": {
-                "type": "string",
-                "description": "Method name to test"
-            },
-            "params": {
-                "type": "array",
-                "description": "Test parameters list, provide according to contract method requirements",
-                "items": {
-                    "type": "string"
-                }
-            },
-            "network": {
-                "type": "string",
-                "description": "Neo network type, must be 'mainnet' or 'testnet'",
-                "enum": ["mainnet", "testnet"],
-                "default": "testnet"
-            }
-        },
-        "required": ["contract_hash", "method"]
-    }
-
-    async def execute(self, contract_hash: str, method: str, params: list = None, network: str = "testnet") -> ToolResult:
-        try:
-            provider = get_provider(network)
-            response = provider._make_request("TestInvokeContract", {
-                "contract_hash": contract_hash,
-                "method": method,
-                "params": params or []
-            })
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Test invocation result: {result}")
-        except Exception as e:
-            return ToolResult(error=str(e))
-
-
-class GetContractStateTool(BaseTool):
-    name: str = "get_contract_state"
-    description: str = "Get current state of Neo smart contracts. Useful when you need to check contract deployment status or verify contract state information. Returns contract state information."
+class GetScCallByContractHashTool(BaseTool):
+    name: str = "get_sccall_by_contracthash"
+    description: str = "Gets the ScCall by the contract script hash."
     parameters: dict = {
         "type": "object",
         "properties": {
@@ -116,11 +25,72 @@ class GetContractStateTool(BaseTool):
 
     async def execute(self, contract_hash: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetContractState", {
-                "contract_hash": contract_hash
-            })
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Contract state: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetScCallByContractHash", {"contract_hash": contract_hash})                
+                result = provider._handle_response(response)
+                return ToolResult(output=f"GetScCallByContractHash:{result}")
         except Exception as e:
-            return ToolResult(error=str(e)) 
+                return ToolResult(error=str(e))
+
+class GetScCallByContractHashAddressTool(BaseTool):
+    name: str = "get_sccall_by_contracthash_address"
+    description: str = "Gets the ScCall by the contract script hash and user's address."
+    parameters: dict = {
+        "type": "object",
+        "properties": {
+            "contract_hash": {
+                "type": "string",
+                "description": "Contract hash, must be valid hexadecimal format (e.g., 0x1234567890abcdef)"
+            },
+            "address": {
+                "type": "string",
+                "description": "the user's address"
+            },
+            "network": {
+                "type": "string",
+                "description": "Neo network type, must be 'mainnet' or 'testnet'",
+                "enum": ["mainnet", "testnet"],
+                "default": "testnet"
+            }
+        },
+        "required": ["contract_hash","address"]
+    }
+
+    async def execute(self, contract_hash: str, address:str ,network: str = "testnet") -> ToolResult:
+        try:
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetScCallByContractHash", {"ContractHash": contract_hash,"Address":address})                
+                result = provider._handle_response(response)
+                return ToolResult(output=f"GetScCallByContractHashAddress:{result}")
+        except Exception as e:
+                return ToolResult(error=str(e))
+        
+class GGetScCallByTransactionHashTool(BaseTool):
+    name: str = "get_sccall_by_transactionhash"
+    description: str = "Gets the ScCall by transaction hash."
+    parameters: dict = {
+        "type": "object",
+        "properties": {
+            "transaction_hash": {
+                "type": "string",
+                "description": "the transaction hash, must be valid hexadecimal format (e.g., 0x1234567890abcdef)"
+            },
+            "network": {
+                "type": "string",
+                "description": "Neo network type, must be 'mainnet' or 'testnet'",
+                "enum": ["mainnet", "testnet"],
+                "default": "testnet"
+            }
+        },
+        "required": ["transaction_hash"]
+    }
+
+    async def execute(self, transaction_hash: str, network: str = "testnet") -> ToolResult:
+        try:
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetScCallByTransactionHash", {"TransactionHash": transaction_hash})                
+                result = provider._handle_response(response)
+                return ToolResult(output=f"GetScCallByTransactionHash:{result}")
+        except Exception as e:
+                return ToolResult(error=str(e))
+        

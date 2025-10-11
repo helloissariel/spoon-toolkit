@@ -10,6 +10,12 @@ class GetCommitteeInfoTool(BaseTool):
     parameters: dict = {
         "type": "object",
         "properties": {
+            "limit":{
+                "type": "int",
+                "description": "the number of items to return",
+                "enum": ["mainnet", "testnet"],
+                "default": "testnet"
+            },
             "network": {
                 "type": "string",
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
@@ -17,14 +23,14 @@ class GetCommitteeInfoTool(BaseTool):
                 "default": "testnet"
             }
         },
-        "required": []
+        "required": ["limit"]
     }
 
-    async def execute(self, network: str = "testnet") -> ToolResult:
+    async def execute(self, limit:int,network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetCommitteeInfo", {})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Committee info: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetCommittee", {Limit:limit})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Committee info: {result}")
         except Exception as e:
             return ToolResult(error=str(e)) 
