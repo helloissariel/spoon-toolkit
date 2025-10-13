@@ -38,7 +38,7 @@ class GetNep11BalanceTool(BaseTool):
                 response = provider._make_request("GetNep11BalanceByContractHashAddressTokenId", {
                 "ContractHash": asset_hash,
                 "Address": validated_address,
-                "TokenId": token_id
+                "tokenId": token_id
             })
                 result = provider._handle_response(response)
                 return ToolResult(output=f"NEP-11 balance: {result}")

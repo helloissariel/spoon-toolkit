@@ -50,7 +50,7 @@ class GetBlockByHashTool(BaseTool):
     async def execute(self, block_hash: str, network: str = "testnet") -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                result = await provider.get_block_info(block_hash)
+                result = await provider._make_request("GetBlockByBlockHash", {"BlockHash":block_hash})
                 return ToolResult(output=f"Block info: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
@@ -79,7 +79,7 @@ class GetBlockByHeightTool(BaseTool):
     async def execute(self, block_height: int, network: str = "testnet") -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                result = await provider.get_block_by_height(block_height)
+                result = await provider._make_request("GetBlockByBlockHeight", {"BlockHeight":block_height})
                 return ToolResult(output=f"Block info: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
@@ -103,7 +103,7 @@ class GetBestBlockHashTool(BaseTool):
     async def execute(self, network: str = "testnet") -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                response = await provider._make_request("GetBestBlockHash", [])
+                response = await provider._make_request("GetBestBlockHash", {})
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Best block hash: {result}")
         except Exception as e:
@@ -122,13 +122,13 @@ class GetRecentBlocksInfoTool(BaseTool):
                 "default": "testnet"
             }
         },
-        "required": ["limit"]
+        "required": []
     }
 
-    async def execute(self, limit: int,network: str = "testnet") -> ToolResult:
+    async def execute(self,network: str = "testnet") -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                response = await provider._make_request("GetBlockInfoList", {Limit:limit})
+                response = await provider._make_request("GetBlockInfoList", {})
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Recent blocks info: {result}")
         except Exception as e:

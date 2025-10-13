@@ -23,7 +23,7 @@ class GetContractCountTool(BaseTool):
         try:
             async with get_provider(network) as provider:
                 response = await provider._make_request("GetContractCount", {})
-                result = await provider._handle_response(response)
+                result =  provider._handle_response(response)
                 
                 return ToolResult(output=f"Contract count: {result}")
         except Exception as e:
@@ -53,7 +53,7 @@ class GetContractByHashTool(BaseTool):
         try:
             async with get_provider(network) as provider:
                 response = await provider._make_request("GetContractByContractHash", {"ContractHash": contract_hash})
-                result = await provider._handle_response(response)
+                result =  provider._handle_response(response)
                 return ToolResult(output=f"Contract info: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
@@ -127,6 +127,14 @@ class GetVerifiedContractTool(BaseTool):
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
+            },
+            "skip": {
+                "type": "integer",
+                "description": "the number of results to skip",
+            },
+            "limit": {
+                "type": "integer",
+                "description": "the number of results to return",
             }
         },
         "required": ["skip","limit"]

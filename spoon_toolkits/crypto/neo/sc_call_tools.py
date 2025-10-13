@@ -26,11 +26,11 @@ class GetScCallByContractHashTool(BaseTool):
     async def execute(self, contract_hash: str, network: str = "testnet") -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                response = await provider._make_request("GetScCallByContractHash", {"contract_hash": contract_hash})                
+                response = await provider._make_request("GetScCallByContractHash", {"ContractHash":contract_hash})
                 result = provider._handle_response(response)
-                return ToolResult(output=f"GetScCallByContractHash:{result}")
+                return ToolResult(output=f"GetScCallByContractHash: {result}")
         except Exception as e:
-                return ToolResult(error=str(e))
+            return ToolResult(error=str(e))
 
 class GetScCallByContractHashAddressTool(BaseTool):
     name: str = "get_sccall_by_contracthash_address"
@@ -65,7 +65,7 @@ class GetScCallByContractHashAddressTool(BaseTool):
         except Exception as e:
                 return ToolResult(error=str(e))
         
-class GGetScCallByTransactionHashTool(BaseTool):
+class GetScCallByTransactionHashTool(BaseTool):
     name: str = "get_sccall_by_transactionhash"
     description: str = "Gets the ScCall by transaction hash."
     parameters: dict = {

@@ -167,8 +167,7 @@ class GetTransferByBlockHashTool(BaseTool):
     async def execute(self, block_hash: str, network: str = "testnet") -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                # Transfer data by block not available via current API
-                response = "Transfer data by block not available via current API"
+                response = await provider._make_request("GetTransferByBlockHash", {"BlockHash": block_hash})
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Transfers: {result}")
         except Exception as e:
@@ -197,8 +196,7 @@ class GetTransferByBlockHeightTool(BaseTool):
     async def execute(self, block_height: int, network: str = "testnet") -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                # Transfer data by block not available via current API
-                response = "Transfer data by block not available via current API"
+                response = await provider._make_request("GetTransferByBlockHeight", {"BlockHeight": block_height})
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Transfers: {result}")
         except Exception as e:
@@ -227,8 +225,7 @@ class GetTransferEventByTransactionHashTool(BaseTool):
     async def execute(self, transaction_hash: str, network: str = "testnet") -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                # Use standard RPC method for application log
-                response = await provider._make_request("getapplicationlog", [transaction_hash])
+                response = await provider._make_request("GetTransferEventByTransactionHash", {"TransactionHash": transaction_hash})
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Transfer events: {result}")
         except Exception as e:

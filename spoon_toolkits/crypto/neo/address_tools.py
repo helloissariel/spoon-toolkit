@@ -119,17 +119,17 @@ class GetTagByAddressesTool(BaseTool):
                 if isinstance(addresses, str):
                     addresses = [addr.strip() for addr in addresses.split(",")]
 
-            # Note: neo-mamba doesn't have a direct GetTagByAddresses method
-            # For now, we'll get basic balance information for each address
-            results = {}
-            for addr in addresses:
-                try:
-                    addr_info = await provider.get_address_info(addr)
-                    results[addr] = addr_info
-                except Exception as e:
-                    results[addr] = {"error": str(e)}
+                # Note: neo-mamba doesn't have a direct GetTagByAddresses method
+                # For now, we'll get basic balance information for each address
+                results = {}
+                for addr in addresses:
+                    try:
+                        addr_info = await provider.get_address_info(addr)
+                        results[addr] = addr_info
+                    except Exception as e:
+                        results[addr] = {"error": str(e)}
 
-            return ToolResult(output=f"Address information: {results}")
+                return ToolResult(output=f"Address information: {results}")
         except Exception as e:
             return ToolResult(error=str(e))
 
