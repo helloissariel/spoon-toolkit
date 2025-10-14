@@ -1,50 +1,26 @@
 """Solana wallet management tools"""
+
+import inspect
 import logging
-from typing import Optional, Dict, Any, List
-from solders.keypair import Keypair
-import base58
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from typing import Any, Dict, List, Optional
+
 from pydantic import Field
+from solders.keypair import Keypair
+
+from .constants import SOLANA_SERVICE_NAME, SOLANA_WALLET_DATA_CACHE_KEY
 from solana.rpc.async_api import AsyncClient
 from solders.pubkey import Pubkey
 from spoon_ai.tools.base import BaseTool, ToolResult
 from .service import (
     get_rpc_url,
-    validate_solana_address,
-    truncate_address,
-    lamports_to_sol,
     get_wallet_cache_scheduler,
-    get_balances_for_addresses,
+    truncate_address,
+    validate_solana_address,
 )
 from .keypairUtils import get_wallet_keypair
 
 logger = logging.getLogger(__name__)  
-
-class SolanaCreateWalletTool(BaseTool):
-    name: str = "solana_create_wallet"
-    description: str = "Create a new Solana wallet with keypair"
-    parameters: dict = {
-        "type": "object",
-        "properties": {
-            "return_private_key": {
-                "type": "boolean",
-                "description": "Whether to return the private key in response",
-                "default": True
-            },
-        },
-        "required": [],
-    }  
-
-    return_private_key: bool = Field(default=True)
-    async def execute(self,return_private_key: bool = True) -> ToolResult:
-        keypair = Keypair()
-        public_key = str(keypair.pubkey())
-        result = {"public_key": public_key,"address": public_key,  "truncated_address": truncate_address(public_key)}
-        if return_private_key:
-            private_key_bytes = bytes(keypair)
-            private_key_base58 = base58.b58encode(private_key_bytes).decode('utf-8')
-            result["private_key"] = private_key_base58 
-
-        return ToolResult(output=result)  
 
 class SolanaWalletInfoTool(BaseTool):
     name: str = "solana_wallet_info"
@@ -144,127 +120,192 @@ class SolanaWalletInfoTool(BaseTool):
             logger.error(f"SolanaWalletInfoTool error: {e}")
             return ToolResult(error=f"Wallet info query failed: {str(e)}")  
 
-class SolanaMultiWalletTool(BaseTool):
-    """Tool for managing multiple wallets."""
-    name: str = "solana_multi_wallet"
-    description: str = "Get information for multiple wallets at once"
-    parameters: dict = {
-        "type": "object",
-        "properties": {
-            "rpc_url": {
-                "type": "string",
-                "description": "Solana RPC endpoint URL"
-            },
-            "addresses": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "List of wallet addresses"
-            },
-            "include_tokens": {
-                "type": "boolean",
-                "description": "Include token balances for each wallet",
-                "default": False
-            }
-        },
-        "required": ["addresses"],
-    }  
-
-    rpc_url: Optional[str] = Field(default=None)
-    addresses: Optional[List[str]] = Field(default=None)
-    include_tokens: bool = Field(default=False)  
-
-    async def execute(
-        self,
-        rpc_url: Optional[str] = None,
-        addresses: Optional[List[str]] = None,
-        include_tokens: bool = False
-    ) -> ToolResult:
-        try:
-            rpc_url = rpc_url or self.rpc_url or get_rpc_url()
-            addresses = addresses or self.addresses
-            include_tokens = include_tokens if include_tokens is not None else self.include_tokens  
-
-            if not addresses:
-                return ToolResult(error="Addresses list is required")  
-
-            # Validate all addresses
-            for addr in addresses:
-                if not validate_solana_address(addr):
-                    return ToolResult(error=f"Invalid address: {addr}")  
-
-            batch_result = await get_balances_for_addresses(
-                rpc_url,
-                addresses,
-                include_tokens=include_tokens,
-            )
-
-            wallet_infos = []
-            balances_data = batch_result.get("balances", {})  
-
-            for address in addresses:
-                balance_info = balances_data.get(address, {})
-                wallet_info = {
-                    "address": address,
-                    "truncated_address": truncate_address(address),
-                    "sol_balance": balance_info.get("sol_balance", 0),
-                    "lamports": balance_info.get("lamports", 0)
-                }  
-
-                if include_tokens and "token_balances" in balance_info:
-                    wallet_info["token_count"] = len(balance_info["token_balances"])
-                    wallet_info["tokens"] = balance_info["token_balances"]  
-
-                wallet_infos.append(wallet_info)  
-
-            return ToolResult(output={
-                "wallet_count": len(addresses),
-                "wallets": wallet_infos,
-                "total_sol": sum(w["sol_balance"] for w in wallet_infos)
-            })  
-
-        except Exception as e:
-            logger.error(f"SolanaMultiWalletTool error: {e}")
-            return ToolResult(error=f"Multi-wallet query failed: {str(e)}")  
-
-async def get_multiple_wallet_balances(rpc_url: str, addresses: List[str]) -> Dict[str, Dict[str, Any]]:
-    """Get SOL balances for multiple wallets ."""
+async def wallet_provider(
+    runtime: Any,
+    _message: Any = None,
+    state: Any = None,
+) -> Dict[str, Any]:
+    """Provide Solana wallet context aligned with the TypeScript provider."""
     try:
-        results = {}  
+        portfolio = await _runtime_get_cache(runtime, SOLANA_WALLET_DATA_CACHE_KEY)
+        if not portfolio:
+            logger.info("solana::wallet provider - portfolio cache is not ready")
+            return {"data": None, "values": {}, "text": ""}
 
-        async with AsyncClient(rpc_url) as client:
-            # Convert addresses to pubkeys
-            pubkeys = [Pubkey.from_string(addr) for addr in addresses]  
+        agent_name = _get_agent_name(runtime, state)
 
-            # Initialize results with default values for all addresses
-            for addr in addresses:
-                results[addr] = {
-                    "sol_balance": 0,
-                    "lamports": 0,
-                    "exists": False,
-                    "error": None
-                }
+        public_key_str = ""
+        try:
+            keypair_result = get_wallet_keypair(runtime=runtime, require_private_key=False)
+            if keypair_result.public_key:
+                if _runtime_has_service(runtime, "solana", SOLANA_SERVICE_NAME):
+                    public_key_str = f" ({str(keypair_result.public_key)})"
+        except Exception:
+            logger.debug("solana::wallet provider - unable to resolve public key", exc_info=True)
+
+        total_usd = _format_decimal(portfolio.get("totalUsd"), precision="0.01", default="0.00")
+        total_sol_raw = portfolio.get("totalSol")
+        total_sol = str(total_sol_raw) if total_sol_raw is not None else "0"
+
+        values: Dict[str, str] = {
+            "total_usd": total_usd,
+            "total_sol": total_sol,
+        }
+
+        items = portfolio.get("items") or []
+        non_zero_items = []
+        for item in items:
+            amount = _to_decimal(item.get("uiAmount") or item.get("balance") or 0)
+            if amount > 0:
+                non_zero_items.append((item, amount))
+
+        for index, (item, amount) in enumerate(non_zero_items):
+            values[f"token_{index}_name"] = item.get("name") or "Unknown"
+            values[f"token_{index}_symbol"] = item.get("symbol") or ""
+            values[f"token_{index}_amount"] = _format_decimal(amount, precision="0.000001", default="0")
+            values[f"token_{index}_usd"] = _format_decimal(item.get("valueUsd"), precision="0.01", default="0.00")
+            value_sol_raw = item.get("valueSol")
+            values[f"token_{index}_sol"] = str(value_sol_raw) if value_sol_raw is not None else "0"
+
+        prices = portfolio.get("prices") or {}
+        if isinstance(prices, dict) and prices:
+            sol_price = prices.get("solana", {}).get("usd")
+            btc_price = prices.get("bitcoin", {}).get("usd")
+            eth_price = prices.get("ethereum", {}).get("usd")
+            if sol_price is not None:
+                values["sol_price"] = _format_decimal(sol_price, precision="0.01", default="0.00")
+            if btc_price is not None:
+                values["btc_price"] = _format_decimal(btc_price, precision="0.01", default="0.00")
+            if eth_price is not None:
+                values["eth_price"] = _format_decimal(eth_price, precision="0.01", default="0.00")
+
+        text_lines = [
+            "",
+            "",
+            f"{agent_name}'s Main Solana Wallet{public_key_str}",
+            f"Total Value: ${values['total_usd']} ({values['total_sol']} SOL)",
+            "",
+            "Token Balances:",
+        ]
+
+        if not non_zero_items:
+            text_lines.append("No tokens found with non-zero balance")
+        else:
+            for item, amount in non_zero_items:
+                name = item.get("name") or "Unknown"
+                symbol = item.get("symbol") or ""
+                amount_str = _format_decimal(amount, precision="0.000001", default="0")
+                usd_value = _format_decimal(item.get("valueUsd"), precision="0.01", default="0.00")
+                value_sol_raw = item.get("valueSol")
+                value_sol = str(value_sol_raw) if value_sol_raw is not None else "0"
+                text_lines.append(f"{name} ({symbol}): {amount_str} (${usd_value} | {value_sol} SOL)")
+
+        if {"sol_price", "btc_price", "eth_price"} & values.keys():
+            text_lines.append("")
+            text_lines.append("Market Prices:")
+            if "sol_price" in values:
+                text_lines.append(f"SOL: ${values['sol_price']}")
+            if "btc_price" in values:
+                text_lines.append(f"BTC: ${values['btc_price']}")
+            if "eth_price" in values:
+                text_lines.append(f"ETH: ${values['eth_price']}")
+
+        text = "\n".join(text_lines)
+
+        return {
+            "data": portfolio,
+            "values": values,
+            "text": text,
+        }
+    except Exception as exc:
+        logger.error("Error in Solana wallet provider: %s", exc, exc_info=True)
+        return {"data": None, "values": {}, "text": ""}
+
+def _format_decimal(value: Any, precision: str = "0.01", default: str = "0") -> str:
+    """Format arbitrary numeric input into a decimal string with fixed precision."""
+    try:
+        decimal_value = Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return default
+    quantizer = Decimal(precision)
+    formatted = decimal_value.quantize(quantizer, rounding=ROUND_HALF_UP)
+    return format(formatted, "f")
+
+
+def _to_decimal(value: Any) -> Decimal:
+    """Best-effort conversion into a Decimal, returning zero on failure."""
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        return Decimal("0")
+
+
+async def _runtime_get_cache(runtime: Any, key: str) -> Any:
+    """Retrieve a cache value from the runtime using either sync or async getters."""
+    if runtime is None:
+        return None
+
+    for attr in ("get_cache", "getCache"):
+        getter = getattr(runtime, attr, None)
+        if callable(getter):
             try:
-                # Batch query account info
-                response = await client.get_multiple_accounts(pubkeys)  
+                result = getter(key)
+            except TypeError:
+                continue
+            if inspect.isawaitable(result):
+                return await result
+            return result
 
-                if response.value:
-                    for i, (addr, account_info) in enumerate(zip(addresses, response.value)):
-                        if account_info:
-                            sol_balance = lamports_to_sol(account_info.lamports)
-                            results[addr] = {
-                                "sol_balance": sol_balance,
-                                "lamports": account_info.lamports,
-                                "exists": True,
-                                "error": None
-                            }
-                else:
-                    for addr in addresses:
-                        results[addr]["error"] = "RPC returned no data"
-            except Exception as e:
-                for addr in addresses:
-                    results[addr]["error"] = f"RPC error: {str(e)}"
-        return results  
+    cache_attr = getattr(runtime, "cache", None)
+    if isinstance(cache_attr, dict):
+        return cache_attr.get(key)
+    return None
 
-    except Exception as e:
-        logger.error(f"Error getting multiple wallet balances: {e}")
-        return {addr: {"error": str(e)} for addr in addresses}  
+
+def _get_agent_name(runtime: Any, state: Any) -> str:
+    """Extract a human-readable agent name from runtime or state."""
+    if state is not None:
+        if isinstance(state, dict):
+            for key in ("agent_name", "agentName"):
+                value = state.get(key)
+                if value:
+                    return str(value)
+        for key in ("agent_name", "agentName"):
+            value = getattr(state, key, None)
+            if value:
+                return str(value)
+
+    if runtime is not None:
+        character = getattr(runtime, "character", None)
+        if character and getattr(character, "name", None):
+            return str(character.name)
+        agent = getattr(runtime, "agent", None)
+        if agent and getattr(agent, "name", None):
+            return str(agent.name)
+        name = getattr(runtime, "name", None)
+        if name:
+            return str(name)
+
+    return "The agent"
+
+
+def _runtime_has_service(runtime: Any, *service_names: str) -> bool:
+    """Check whether the runtime exposes any of the requested services."""
+    if runtime is None:
+        return False
+
+    for service_name in service_names:
+        for attr in ("get_service", "getService", "get"):
+            getter = getattr(runtime, attr, None)
+            if callable(getter):
+                try:
+                    service = getter(service_name)
+                except TypeError:
+                    continue
+                if service:
+                    return True
+        services_attr = getattr(runtime, "services", None)
+        if isinstance(services_attr, dict) and services_attr.get(service_name):
+            return True
+    return False
+

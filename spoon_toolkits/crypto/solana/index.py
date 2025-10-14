@@ -9,7 +9,7 @@ from .constants import SOLANA_SERVICE_NAME
 from .service import SolanaService
 from .swap import SolanaSwapTool
 from .transfer import SolanaTransferTool
-from .wallet import SolanaWalletInfoTool
+from .wallet import wallet_provider
 
 logger = logging.getLogger(__name__)
 
@@ -86,90 +86,6 @@ class PluginManifest:
             "services": list(self.services),
             "init": self.init,
         }
-
-def _get_agent_name(runtime: Any, state: Any) -> str:
-    """Extract a human-readable agent name from runtime or state."""
-    if state is not None:
-        for key in ("agent_name", "agentName"):
-            if isinstance(state, dict) and key in state:
-                return str(state[key])
-            value = getattr(state, key, None)
-            if value:
-                return str(value)
-    if runtime is not None:
-        for attr in ("character", "agent"):
-            candidate = getattr(runtime, attr, None)
-            if candidate:
-                name = getattr(candidate, "name", None)
-                if name:
-                    return str(name)
-        name = getattr(runtime, "name", None)
-        if name:
-            return str(name)
-    return "Agent"
-
-
-async def wallet_provider(
-    runtime: Any,
-    _message: Any = None,
-    state: Any = None,
-) -> Dict[str, Any]:
-    """Return structured wallet information for context injection."""
-    tool = SolanaWalletInfoTool()
-    result = await tool.execute()
-
-    if result.error:
-        logger.info("solana-wallet provider unavailable: %s", result.error)
-        return {
-            "data": None,
-            "values": {},
-            "text": "",
-            "error": result.error,
-        }
-
-    wallet = result.output or {}
-    address = wallet.get("address") or ""
-    truncated = wallet.get("truncated_address") or address[-8:] if address else ""
-    sol_balance = wallet.get("sol_balance", 0)
-    token_count = int(wallet.get("token_count", 0) or 0)
-    tokens = wallet.get("tokens") or []
-
-    values: Dict[str, str] = {
-        "address": address,
-        "truncated_address": truncated,
-        "sol_balance": f"{sol_balance}",
-        "token_count": str(token_count),
-    }
-
-    lines = [
-        "",
-        "",
-        f"{_get_agent_name(runtime, state)}'s Solana Wallet {f'({truncated})' if truncated else ''}".strip(),
-        f"SOL Balance: {sol_balance}",
-    ]
-
-    if tokens:
-        lines.append("")
-        lines.append("Token Balances:")
-        for index, token in enumerate(tokens):
-            mint = token.get("mint", "")
-            balance = token.get("balance", token.get("ui_amount", 0))
-            decimals = token.get("decimals", "")
-            values[f"token_{index}_mint"] = mint
-            values[f"token_{index}_balance"] = f"{balance}"
-            if decimals != "":
-                values[f"token_{index}_decimals"] = str(decimals)
-            lines.append(f"- {mint}: {balance}")
-    else:
-        lines.append("No SPL token balances available.")
-
-    text = "\n".join(lines)
-
-    return {
-        "data": wallet,
-        "values": values,
-        "text": text,
-    }
 
 async def init_plugin(_context: Any = None, runtime: Any = None) -> None:
     """Initialise Solana plugin behaviour with the provided runtime."""
