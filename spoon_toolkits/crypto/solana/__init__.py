@@ -9,16 +9,12 @@ from .swap import SolanaSwapTool
 # Wallet management tools
 from .wallet import (
     SolanaCreateWalletTool,
-    SolanaImportWalletTool,
     SolanaWalletInfoTool,
-    SolanaValidateAddressTool,
-    SolanaWalletHistoryTool,
+    SolanaMultiWalletTool,
 )
 
 # Blockchain service tools and helpers
 from .service import (
-    SolanaSignatureVerifyTool,
-    SolanaKeysDetectionTool,
     create_request_headers,
     detect_private_keys_from_string,
     detect_pubkeys_from_string,
@@ -43,7 +39,6 @@ from .keypairUtils import get_wallet_keypair, get_wallet_key, get_private_key, g
 # Plugin integration
 from .index import solana_plugin, PluginManifest, ProviderDefinition, wallet_provider, init_plugin
 
-
 # Environment helpers
 from .environment import load_solana_config, SolanaConfig
 
@@ -64,30 +59,13 @@ from .types import (
 __all__ = [
     # Transfer tools
     "SolanaTransferTool",
-    "SolanaBatchTransferTool",
     # Swap tools
     "SolanaSwapTool",
-    "SolanaSwapQuoteTool",
-    "SolanaOptimalTradeCalculatorTool",
     # Wallet tools
     "SolanaCreateWalletTool",
-    "SolanaImportWalletTool",
     "SolanaWalletInfoTool",
-    "SolanaValidateAddressTool",
     "SolanaMultiWalletTool",
-    "SolanaWalletHistoryTool",
-    "SolanaBatchWalletTool",
-    "SolanaWalletFormatterTool",
     # Service tools & helpers
-    "SolanaNetworkInfoTool",
-    "SolanaBlockTool",
-    "SolanaTransactionTool",
-    "SolanaProgramTool",
-    "SolanaMarketDataTool",
-    "SolanaAddressTypeTool",
-    "SolanaAccountMonitorTool",
-    "SolanaSignatureVerifyTool",
-    "SolanaKeysDetectionTool",
     "create_request_headers",
     "detect_private_keys_from_string",
     "detect_pubkeys_from_string",
@@ -115,7 +93,6 @@ __all__ = [
     "ProviderDefinition",
     "wallet_provider",
     "init_plugin",
-    "SolanaPluginService",
     # Environment helpers
     "load_solana_config",
     "SolanaConfig",

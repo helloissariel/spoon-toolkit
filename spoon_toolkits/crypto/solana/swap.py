@@ -375,7 +375,6 @@ class SolanaSwapTool(BaseTool):
                 signature,
                 encoding="jsonParsed",
                 commitment="confirmed",
-                max_supported_transaction_version=0
             )
 
             if tx_details.value and tx_details.value.transaction.meta:
