@@ -2,12 +2,13 @@
 
 import inspect
 import logging
-from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
+from decimal import InvalidOperation, ROUND_HALF_UP
 from typing import Any, Dict, List, Optional
 
 from pydantic import Field
 from solders.keypair import Keypair
 
+from .bignumber import BigNumber, toBN
 from .constants import SOLANA_SERVICE_NAME, SOLANA_WALLET_DATA_CACHE_KEY
 from solana.rpc.async_api import AsyncClient
 from solders.pubkey import Pubkey
@@ -222,22 +223,22 @@ async def wallet_provider(
         return {"data": None, "values": {}, "text": ""}
 
 def _format_decimal(value: Any, precision: str = "0.01", default: str = "0") -> str:
-    """Format arbitrary numeric input into a decimal string with fixed precision."""
+    """Format arbitrary numeric input using BigNumber with fixed precision."""
     try:
-        decimal_value = Decimal(str(value))
+        decimal_value = toBN(value)
+        quantizer = toBN(precision)
+        formatted = decimal_value.quantize(quantizer, rounding=ROUND_HALF_UP)
     except (InvalidOperation, TypeError, ValueError):
         return default
-    quantizer = Decimal(precision)
-    formatted = decimal_value.quantize(quantizer, rounding=ROUND_HALF_UP)
     return format(formatted, "f")
 
 
-def _to_decimal(value: Any) -> Decimal:
-    """Best-effort conversion into a Decimal, returning zero on failure."""
+def _to_decimal(value: Any) -> BigNumber:
+    """Best-effort conversion into a BigNumber, returning zero on failure."""
     try:
-        return Decimal(str(value))
+        return toBN(value)
     except (InvalidOperation, TypeError, ValueError):
-        return Decimal("0")
+        return toBN(0)
 
 
 async def _runtime_get_cache(runtime: Any, key: str) -> Any:
@@ -308,4 +309,3 @@ def _runtime_has_service(runtime: Any, *service_names: str) -> bool:
         if isinstance(services_attr, dict) and services_attr.get(service_name):
             return True
     return False
-

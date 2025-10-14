@@ -612,6 +612,7 @@ class SolanaService:
         self.update_interval: int = UPDATE_INTERVAL
         self._wallet_cache: Optional[Dict[str, Any]] = None
         self._update_task: Optional[asyncio.Task] = None
+        self._jupiter_task: Optional[asyncio.Task] = None
         self._running = False
         self._cache_lock = asyncio.Lock()
 
@@ -632,6 +633,11 @@ class SolanaService:
             self._update_task = asyncio.create_task(
                 self._wallet_update_loop(),
                 name="solana-wallet-refresh",
+            )
+        if self._jupiter_task is None:
+            self._jupiter_task = asyncio.create_task(
+                self._watch_jupiter_service(),
+                name="solana-jupiter-service",
             )
 
     @staticmethod
@@ -685,6 +691,11 @@ class SolanaService:
             with contextlib.suppress(Exception):
                 await self.connection.close()  # type: ignore[union-attr]
             self.connection = None
+        if self._jupiter_task:
+            self._jupiter_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._jupiter_task
+            self._jupiter_task = None
 
     # ------------------------------------------------------------------
     # Runtime helpers
@@ -736,6 +747,61 @@ class SolanaService:
                 return await value
             return value
         return None
+
+    async def _locate_runtime_service(self, service_type: str) -> Optional[Any]:
+        service = await self._runtime_call(("get_service", "getService", "get"), service_type)
+        if service:
+            return service
+        services_attr = getattr(self.runtime, "services", None)
+        if isinstance(services_attr, dict):
+            candidate = services_attr.get(service_type)
+            if inspect.isawaitable(candidate):
+                candidate = await candidate  # type: ignore[assignment]
+            if candidate:
+                return candidate
+        return None
+
+    async def _watch_jupiter_service(self) -> None:
+        while True:
+            if not self._running:
+                return
+            try:
+                service = await self._locate_runtime_service("JUPITER_SERVICE")
+            except Exception as exc:  # pragma: no cover - defensive logging
+                logger.debug("Error locating JUPITER_SERVICE: %s", exc)
+                service = None
+            if service:
+                self.jupiter_service = service
+                logger.info("Solana service acquired JUPITER_SERVICE integration")
+                return
+            await asyncio.sleep(1.0)
+
+    async def _get_jupiter_service(self) -> Optional[Any]:
+        if self.jupiter_service:
+            return self.jupiter_service
+        if not self._running:
+            return None
+        service = await self._locate_runtime_service("JUPITER_SERVICE")
+        if service:
+            self.jupiter_service = service
+        return service
+
+    async def _call_jupiter_service(self, method_name: str, *args: Any, **kwargs: Any) -> Any:
+        service = await self._get_jupiter_service()
+        if not service:
+            return None
+        method = getattr(service, method_name, None)
+        if not callable(method):
+            logger.debug("Jupiter service missing method %s", method_name)
+            return None
+        try:
+            result = method(*args, **kwargs)
+            if inspect.isawaitable(result):
+                result = await result
+            return result
+        except Exception as exc:
+            logger.debug("Jupiter service call %s failed: %s", method_name, exc)
+            return None
 
     async def _get_runtime_cache(self, key: str) -> Any:
         return await self._runtime_call(("get_cache", "getCache"), key)
@@ -1528,24 +1594,63 @@ class SolanaService:
         amount = float(availableAmount)
         if amount <= 0:
             raise ValueError("availableAmount must be positive")
-        # Basic heuristic when Jupiter service is unavailable
-        if amount > 0 and amount <= 1:
+
+        if await self._get_jupiter_service():
+            amount_arg: Union[int, float] = self._coerce_int_amount(availableAmount) or amount
+            price_impact_raw = await self._call_jupiter_service(
+                "getPriceImpact",
+                inputMint=inputMint,
+                outputMint=outputMint,
+                amount=amount_arg,
+            )
+            slippage_raw = await self._call_jupiter_service(
+                "findBestSlippage",
+                inputMint=inputMint,
+                outputMint=outputMint,
+                amount=amount_arg,
+            )
+            price_impact = self._safe_float(price_impact_raw)
+            slippage = self._safe_float(slippage_raw)
+            if price_impact is not None and slippage is not None:
+                optimal_amount = float(amount_arg)
+                if price_impact > 5:
+                    optimal_amount *= 0.5
+                return {"amount": optimal_amount, "slippage": float(slippage)}
+
+        # Basic heuristic when Jupiter service is unavailable or inconclusive
+        if amount <= 1:
             slippage = 100  # 1%
         elif amount <= 10:
             slippage = 150
         else:
             slippage = 200
-        return {"amount": amount, "slippage": slippage}
+        return {"amount": amount, "slippage": float(slippage)}
 
     async def calculateOptimalBuyAmount2(
         self,
         quote: Dict[str, Any],
         available_amount: Union[int, float],
     ) -> Dict[str, float]:
-        price_impact = float(quote.get("priceImpactPct", 0))
+        price_impact = self._safe_float(quote.get("priceImpactPct")) or 0.0
         optimal_amount = float(available_amount)
         if price_impact > 5:
             optimal_amount = float(available_amount) * 0.5
+
+        if await self._get_jupiter_service():
+            amount_arg: Union[int, float] = self._coerce_int_amount(available_amount) or available_amount
+            slippage_raw = await self._call_jupiter_service(
+                "findBestSlippage",
+                inputMint=quote.get("inputMint"),
+                outputMint=quote.get("outputMint"),
+                amount=amount_arg,
+            )
+            slippage_value = self._safe_float(slippage_raw)
+            if slippage_value is not None:
+                return {
+                    "amount": float(optimal_amount),
+                    "slippage": float(slippage_value),
+                }
+
         if price_impact < 0.5:
             slippage = 50
         elif price_impact < 1:
@@ -1560,39 +1665,234 @@ class SolanaService:
         responses: Dict[str, Any] = {}
         swap_tool = SolanaSwapTool()
 
+        input_token = (
+            (signal.get("sourceTokenCA") if isinstance(signal, dict) else getattr(signal, "sourceTokenCA", None))
+            if signal
+            else None
+        )
+        if not input_token and isinstance(signal, dict):
+            input_token = signal.get("inputMint") or signal.get("sourceToken")
+
+        output_token = (
+            (signal.get("targetTokenCA") if isinstance(signal, dict) else getattr(signal, "targetTokenCA", None))
+            if signal
+            else None
+        )
+        if not output_token and isinstance(signal, dict):
+            output_token = signal.get("outputMint") or signal.get("targetToken")
+
         for wallet in wallets:
-            keypair_info = wallet.get("keypair", {})
-            pubkey = keypair_info.get("publicKey") or f"wallet_{len(responses)}"
+            keypair_info = wallet.get("keypair", {}) or {}
+            raw_pubkey = keypair_info.get("publicKey")
+            pubkey = self._stringify_pubkey(raw_pubkey)
+            wallet_label = pubkey or f"wallet_{len(responses)}"
             private_key = keypair_info.get("privateKey")
             amount = wallet.get("amount")
 
             if not private_key:
-                responses[pubkey] = {"success": False, "error": "private key missing"}
+                responses[wallet_label] = {"success": False, "error": "private key missing"}
                 continue
+
+            amount_float = self._safe_float(amount)
+            if amount_float is not None and amount_float <= 0:
+                responses[wallet_label] = {"success": False, "error": "amount must be positive"}
+                continue
+
+            precheck = await self._run_jupiter_prechecks(
+                wallet_address=pubkey,
+                amount=amount,
+                input_token=input_token,
+                output_token=output_token,
+            )
+            precheck_error = precheck.get("error")
+            if precheck_error:
+                responses[wallet_label] = {"success": False, "error": precheck_error}
+                continue
+
+            slippage_bps = precheck.get("slippage_bps")
+            if slippage_bps is not None:
+                try:
+                    slippage_bps = int(slippage_bps)
+                except (TypeError, ValueError):
+                    slippage_bps = None
+            if slippage_bps is not None and slippage_bps <= 0:
+                slippage_bps = None
 
             try:
                 result = await swap_tool.execute(
                     private_key=private_key,
-                    input_token=signal.get("sourceTokenCA"),
-                    output_token=signal.get("targetTokenCA"),
+                    input_token=input_token,
+                    output_token=output_token,
                     amount=amount,
+                    slippage_bps=slippage_bps,
                 )
             except Exception as exc:  # pragma: no cover - external dependency
-                responses[pubkey] = {"success": False, "error": str(exc)}
+                responses[wallet_label] = {"success": False, "error": str(exc)}
                 continue
 
             if result.error:
-                responses[pubkey] = {"success": False, "error": result.error}
+                responses[wallet_label] = {"success": False, "error": result.error}
             else:
-                payload = result.output or {}
-                responses[pubkey] = {
-                    "success": True,
-                    "outAmount": payload.get("output_amount"),
-                    "signature": payload.get("signature"),
-                    "fees": payload.get("fees"),
-                }
+                payload = dict(result.output or {})
+                if precheck.get("sol_balance") is not None:
+                    payload.setdefault("sol_balance", precheck["sol_balance"])
+                if slippage_bps is not None:
+                    payload.setdefault("slippage_bps", slippage_bps)
+                if precheck.get("quote") is not None:
+                    payload.setdefault("quote", precheck["quote"])
+                responses[wallet_label] = {"success": True, **payload}
 
         return responses
+
+    async def _run_jupiter_prechecks(
+        self,
+        *,
+        wallet_address: Optional[str],
+        amount: Any,
+        input_token: Optional[str],
+        output_token: Optional[str],
+    ) -> Dict[str, Any]:
+        summary: Dict[str, Any] = {
+            "error": None,
+            "slippage_bps": None,
+            "quote": None,
+            "sol_balance": None,
+            "available_lamports": None,
+        }
+
+        sol_balance = None
+        available_lamports = 0
+        if wallet_address:
+            try:
+                balances = await self.getBalancesByAddrs([wallet_address])
+            except Exception as exc:  # pragma: no cover - network dependent
+                logger.debug("Failed to fetch balances for %s: %s", wallet_address, exc)
+                balances = {}
+            sol_balance = balances.get(wallet_address)
+            summary["sol_balance"] = sol_balance
+            if isinstance(sol_balance, (int, float)):
+                available_lamports = int(sol_balance * LAMPORTS_PER_SOL)
+                summary["available_lamports"] = available_lamports
+
+        if not await self._get_jupiter_service():
+            return summary
+
+        if not wallet_address or not input_token or not output_token:
+            return summary
+
+        int_amount = self._coerce_int_amount(amount)
+        if int_amount is None or int_amount <= 0:
+            return summary
+
+        base_needed_raw = await self._call_jupiter_service(
+            "estimateLamportsNeeded",
+            inputMint=input_token,
+            inAmount=int_amount,
+        )
+        base_needed = self._coerce_int_amount(base_needed_raw)
+        if base_needed is not None and available_lamports and base_needed > available_lamports:
+            summary["error"] = "not enough SOL"
+            return summary
+
+        quote = await self._call_jupiter_service(
+            "getQuote",
+            inputMint=input_token,
+            outputMint=output_token,
+            slippageBps=200,
+            amount=int_amount,
+        )
+        if isinstance(quote, dict):
+            summary["quote"] = quote
+            total_needed = self._safe_float(quote.get("totalLamportsNeeded"))
+            if total_needed is not None and available_lamports and total_needed > available_lamports:
+                summary["error"] = "not enough SOL"
+                return summary
+
+            implied_slippage = self._compute_implied_slippage(quote)
+            if implied_slippage is not None:
+                summary["slippage_bps"] = max(1, int(implied_slippage))
+            else:
+                try:
+                    optimal = await self.calculateOptimalBuyAmount2(quote, available_amount=int_amount)
+                except Exception as exc:  # pragma: no cover - defensive
+                    logger.debug("calculateOptimalBuyAmount2 failed: %s", exc)
+                    optimal = None
+                if isinstance(optimal, dict):
+                    slippage_val = self._safe_float(optimal.get("slippage"))
+                    if slippage_val is not None:
+                        summary["slippage_bps"] = max(1, int(slippage_val))
+        return summary
+
+    @staticmethod
+    def _compute_implied_slippage(quote: Any) -> Optional[float]:
+        if not isinstance(quote, dict):
+            return None
+        out_amount = SolanaService._safe_float(quote.get("outAmount"))
+        other_amount = SolanaService._safe_float(quote.get("otherAmountThreshold"))
+        if out_amount is None or other_amount is None or out_amount <= 0:
+            return None
+        return ((out_amount - other_amount) / out_amount) * 10_000
+
+    @staticmethod
+    def _safe_float(value: Any) -> Optional[float]:
+        if value is None or isinstance(value, bool):
+            return None
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return None
+            try:
+                return float(stripped)
+            except ValueError:
+                return None
+        return None
+
+    @staticmethod
+    def _coerce_int_amount(value: Any) -> Optional[int]:
+        if value is None or isinstance(value, bool):
+            return None
+        if isinstance(value, int):
+            return value if value > 0 else None
+        if isinstance(value, float):
+            if value <= 0:
+                return None
+            if value.is_integer():
+                return int(value)
+            return None
+        if isinstance(value, str):
+            stripped = value.strip()
+            if not stripped:
+                return None
+            try:
+                return int(stripped)
+            except ValueError:
+                try:
+                    float_val = float(stripped)
+                except ValueError:
+                    return None
+                if float_val <= 0 or not float_val.is_integer():
+                    return None
+                return int(float_val)
+        return None
+
+    @staticmethod
+    def _stringify_pubkey(value: Any) -> Optional[str]:
+        if value is None:
+            return None
+        if isinstance(value, str):
+            return value
+        for attr in ("to_base58", "toBase58", "to_string", "toString"):
+            func = getattr(value, attr, None)
+            if callable(func):
+                try:
+                    result = func()
+                except Exception:
+                    continue
+                if isinstance(result, str):
+                    return result
+        return str(value)
 
     @staticmethod
     def _normalise_ws_url(rpc_url: str) -> str:

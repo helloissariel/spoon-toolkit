@@ -62,9 +62,7 @@ __all__ = [
     # Swap tools
     "SolanaSwapTool",
     # Wallet tools
-    "SolanaCreateWalletTool",
     "SolanaWalletInfoTool",
-    "SolanaMultiWalletTool",
     # Service tools & helpers
     "create_request_headers",
     "detect_private_keys_from_string",
