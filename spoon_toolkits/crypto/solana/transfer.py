@@ -3,7 +3,8 @@ from typing import Optional
 from pydantic import Field
 
 from spoon_ai.tools.base import BaseTool, ToolResult
-from .utils import get_rpc_url, get_wallet_key, get_associated_token_address, is_native_sol
+from .service import get_rpc_url, get_associated_token_address, is_native_sol
+from .keypairUtils import get_wallet_key
 from .constants import TOKEN_PROGRAM_ID
 
 from solana.rpc.async_api import AsyncClient

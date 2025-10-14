@@ -3,11 +3,14 @@ from typing import Optional, Dict, Any, Union
 import httpx
 from pydantic import Field
 from spoon_ai.tools.base import BaseTool, ToolResult
-from .utils import (
-    get_rpc_url, get_wallet_key,
-    is_native_sol, parse_token_amount, format_token_amount,
-    parse_transaction_error
+from .service import (
+    get_rpc_url,
+    is_native_sol,
+    parse_token_amount,
+    format_token_amount,
+    parse_transaction_error,
 )
+from .keypairUtils import get_wallet_key
 from .constants import (
     JUPITER_QUOTE_ENDPOINT, JUPITER_SWAP_ENDPOINT, NATIVE_SOL_ADDRESS,
     MAX_SLIPPAGE_BPS, JUPITER_PRIORITY_LEVELS
@@ -385,4 +388,3 @@ class SolanaSwapTool(BaseTool):
             logger.warning(f"Failed to get transaction fees: {e}")
 
         return {}
-

@@ -1,17 +1,49 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from dataclasses import dataclass, field
 from typing import Any, Awaitable, Callable, Dict, Optional, Sequence
 
 from .constants import SOLANA_SERVICE_NAME
-from .integration import RuntimeServiceDiscovery
 from .service import SolanaService
 from .swap import SolanaSwapTool
 from .transfer import SolanaTransferTool
 from .wallet import SolanaWalletInfoTool
 
 logger = logging.getLogger(__name__)
+
+
+def _runtime_get_service(runtime: Any, service_type: str) -> Optional[Any]:
+    if runtime is None:
+        return None
+
+    for attr in ("get_service", "getService", "get"):
+        getter = getattr(runtime, attr, None)
+        if callable(getter):
+            try:
+                service = getter(service_type)
+            except TypeError:
+                continue
+            if service:
+                return service
+
+    services_attr = getattr(runtime, "services", None)
+    if isinstance(services_attr, dict):
+        return services_attr.get(service_type)
+
+    return None
+
+
+async def _wait_for_service(runtime: Any, service_type: str, *, poll_interval: float = 1.0, log_prefix: str = "runtime") -> Optional[Any]:
+    while True:
+        service = _runtime_get_service(runtime, service_type)
+        if service is not None:
+            logger.info("%s acquired %s service", log_prefix, service_type)
+            return service
+
+        logger.debug("%s waiting for %s service...", log_prefix, service_type)
+        await asyncio.sleep(poll_interval)
 
 async def _noop_init(*_args: Any, **_kwargs: Any) -> None:
     """Default no-op init used when callers do not supply an init hook."""
@@ -146,44 +178,52 @@ async def init_plugin(_context: Any = None, runtime: Any = None) -> None:
         return
 
     logger.info("Solana plugin initialising")
-    discovery = RuntimeServiceDiscovery(
-        runtime,
-        service_type="TRADER_CHAIN",
-        poll_interval=1.0,
-        timeout=None,
-        log_prefix="solana",
+
+    async def _register_with_trader_chain() -> None:
+        try:
+            trader_chain_service = await _wait_for_service(
+                runtime,
+                service_type="TRADER_CHAIN",
+                poll_interval=1.0,
+                log_prefix="solana",
+            )
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.warning("Failed to acquire TRADER_CHAIN service: %s", exc)
+            return
+
+        if trader_chain_service is None:
+            logger.warning("TRADER_CHAIN service unavailable")
+            return
+
+        register_fn: Optional[Callable[[Dict[str, Any]], Any]] = None
+        for attr in ("register_chain", "registerChain"):
+            candidate = getattr(trader_chain_service, attr, None)
+            if callable(candidate):
+                register_fn = candidate
+                break
+
+        if register_fn is None:
+            logger.warning("TRADER_CHAIN service does not expose a register_chain method")
+            return
+
+        details = {
+            "name": "Solana services",
+            "chain": "solana",
+            "service": SOLANA_SERVICE_NAME,
+        }
+
+        try:
+            maybe_coro = register_fn(details)
+            if hasattr(maybe_coro, "__await__"):
+                await maybe_coro  # type: ignore[func-returns-value]
+            logger.info("Solana plugin registered with TRADER_CHAIN service")
+        except Exception as exc:  # pylint: disable=broad-except
+            logger.error("Failed to register Solana chain with trader service: %s", exc)
+
+    asyncio.create_task(
+        _register_with_trader_chain(),
+        name="solana-register-trader-chain",
     )
-
-    try:
-        trader_chain_service = await discovery.wait_for_service()
-    except Exception as exc:  # pylint: disable=broad-except
-        logger.warning("Failed to acquire TRADER_CHAIN service: %s", exc)
-        return
-
-    register_fn: Optional[Callable[[Dict[str, Any]], Any]] = None
-    for attr in ("register_chain", "registerChain"):
-        candidate = getattr(trader_chain_service, attr, None)
-        if callable(candidate):
-            register_fn = candidate
-            break
-
-    if register_fn is None:
-        logger.warning("TRADER_CHAIN service does not expose a register_chain method")
-        return
-
-    details = {
-        "name": "Solana services",
-        "chain": "solana",
-        "service": SOLANA_SERVICE_NAME,
-    }
-
-    try:
-        maybe_coro = register_fn(details)
-        if hasattr(maybe_coro, "__await__"):
-            await maybe_coro  # type: ignore[func-returns-value]
-        logger.info("Solana plugin registered with TRADER_CHAIN service")
-    except Exception as exc:  # pylint: disable=broad-except
-        logger.error("Failed to register Solana chain with trader service: %s", exc)
 
 solana_plugin = PluginManifest(
     name=SOLANA_SERVICE_NAME,

@@ -3,16 +3,18 @@ import logging
 from typing import Optional, Dict, Any, List
 from solders.keypair import Keypair
 import base58
-import base64
 from pydantic import Field
 from solana.rpc.async_api import AsyncClient
 from solders.pubkey import Pubkey
 from spoon_ai.tools.base import BaseTool, ToolResult
-from .utils import (
-    get_rpc_url, validate_solana_address, validate_private_key,
-    get_wallet_keypair, truncate_address
+from .service import (
+    get_rpc_url,
+    validate_solana_address,
+    truncate_address,
+    lamports_to_sol,
+    get_wallet_cache_scheduler,
 )
-from .service import get_wallet_cache_scheduler  
+from .keypairUtils import get_wallet_keypair
 
 logger = logging.getLogger(__name__)  
 
@@ -189,20 +191,14 @@ class SolanaMultiWalletTool(BaseTool):
                 if not validate_solana_address(addr):
                     return ToolResult(error=f"Invalid address: {addr}")  
 
-            # Use batch balance tool
-            from .balance import SolanaBalanceTool
-            balance_tool = SolanaBalanceTool()  
-
-            batch_result = await balance_tool.execute(
-                rpc_url=rpc_url,
-                addresses=addresses,
-                include_tokens=include_tokens
+            batch_result = await get_balances_for_addresses(
+                rpc_url,
+                addresses,
+                include_tokens=include_tokens,
             )
-            if batch_result.error:
-                return ToolResult(error=batch_result.error)
-            # Format results
+
             wallet_infos = []
-            balances_data = batch_result.output.get("balances", {})  
+            balances_data = batch_result.get("balances", {})  
 
             for address in addresses:
                 balance_info = balances_data.get(address, {})
@@ -232,8 +228,6 @@ class SolanaMultiWalletTool(BaseTool):
 async def get_multiple_wallet_balances(rpc_url: str, addresses: List[str]) -> Dict[str, Dict[str, Any]]:
     """Get SOL balances for multiple wallets ."""
     try:
-        from .utils import lamports_to_sol  
-
         results = {}  
 
         async with AsyncClient(rpc_url) as client:
