@@ -1,81 +1,56 @@
-"""Solana toolkit for SpoonAI"""
+"""Solana toolkit exports for SpoonAI."""
 
-# Transfer Tools
-from .transfer import SolanaTransferTool, SolanaBatchTransferTool
+# Transfer tools
+from .transfer import SolanaTransferTool
 
-# Swap Tools
-from .swap import (
-    SolanaSwapTool,
-    SolanaSwapQuoteTool,
-    SolanaOptimalTradeCalculatorTool
-)
+# Swap tools
+from .swap import SolanaSwapTool
 
-
-# Wallet Management Tools
+# Wallet management tools
 from .wallet import (
     SolanaCreateWalletTool,
     SolanaImportWalletTool,
     SolanaWalletInfoTool,
     SolanaValidateAddressTool,
-    SolanaMultiWalletTool,
     SolanaWalletHistoryTool,
-    SolanaBatchWalletTool,
-    SolanaWalletFormatterTool
 )
 
-# Blockchain Service Tools
+# Blockchain service tools and helpers
 from .service import (
-    SolanaNetworkInfoTool,
-    SolanaBlockTool,
-    SolanaTransactionTool,
-    SolanaProgramTool,
-    SolanaMarketDataTool,
-    SolanaAddressTypeTool,
-    SolanaAccountMonitorTool,
-    get_wallet_cache_scheduler,
-    get_rpc_url,
-    validate_solana_address,
-    validate_private_key,
-    get_api_key,
-    lamports_to_sol,
-    sol_to_lamports,
-    format_token_amount,
-    parse_token_amount,
-    is_native_sol,
-    verify_solana_signature,
-    detect_pubkeys_from_string,
-    detect_private_keys_from_string,
-    create_request_headers,
-    parse_transaction_error,
-    truncate_address,
     SolanaSignatureVerifyTool,
     SolanaKeysDetectionTool,
-)
-from .keypairUtils import (
-    get_wallet_keypair,
-    get_wallet_key,
-    get_private_key,
-    get_public_key,
-)
-from .index import (
-    solana_plugin,
-    PluginManifest,
-    ProviderDefinition,
-    wallet_provider,
-    init_plugin,
-)
-from .plugin_service import SolanaPluginService
-from .environment import (
-    load_solana_config,
-    SolanaConfig,
-)
-from .constants import (
-    NATIVE_SOL_ADDRESS,
-    TOKEN_ADDRESSES,
-    DEFAULT_SLIPPAGE_BPS,
-    JUPITER_PRIORITY_LEVELS
+    create_request_headers,
+    detect_private_keys_from_string,
+    detect_pubkeys_from_string,
+    format_token_amount,
+    get_api_key,
+    get_rpc_url,
+    get_wallet_cache_scheduler,
+    is_native_sol,
+    lamports_to_sol,
+    parse_token_amount,
+    parse_transaction_error,
+    sol_to_lamports,
+    truncate_address,
+    validate_private_key,
+    validate_solana_address,
+    verify_solana_signature,
 )
 
+# Keypair utilities
+from .keypairUtils import get_wallet_keypair, get_wallet_key, get_private_key, get_public_key
+
+# Plugin integration
+from .index import solana_plugin, PluginManifest, ProviderDefinition, wallet_provider, init_plugin
+
+
+# Environment helpers
+from .environment import load_solana_config, SolanaConfig
+
+# Shared constants
+from .constants import NATIVE_SOL_ADDRESS, TOKEN_ADDRESSES, DEFAULT_SLIPPAGE_BPS, JUPITER_PRIORITY_LEVELS
+
+# Typed models
 from .types import (
     WalletPortfolio,
     Item,
@@ -83,25 +58,18 @@ from .types import (
     TransferContent,
     SwapContent,
     KeypairResult,
-    TokenMetadata
+    TokenMetadata,
 )
 
-# Export all tools for easy access
 __all__ = [
-
-    # Transfer Tools
+    # Transfer tools
     "SolanaTransferTool",
     "SolanaBatchTransferTool",
-
-    # Swap Tools
+    # Swap tools
     "SolanaSwapTool",
     "SolanaSwapQuoteTool",
     "SolanaOptimalTradeCalculatorTool",
-
-
-   
-
-    # Wallet Tools
+    # Wallet tools
     "SolanaCreateWalletTool",
     "SolanaImportWalletTool",
     "SolanaWalletInfoTool",
@@ -110,8 +78,7 @@ __all__ = [
     "SolanaWalletHistoryTool",
     "SolanaBatchWalletTool",
     "SolanaWalletFormatterTool",
-
-    # Service Tools
+    # Service tools & helpers
     "SolanaNetworkInfoTool",
     "SolanaBlockTool",
     "SolanaTransactionTool",
@@ -119,22 +86,50 @@ __all__ = [
     "SolanaMarketDataTool",
     "SolanaAddressTypeTool",
     "SolanaAccountMonitorTool",
+    "SolanaSignatureVerifyTool",
+    "SolanaKeysDetectionTool",
+    "create_request_headers",
+    "detect_private_keys_from_string",
+    "detect_pubkeys_from_string",
+    "format_token_amount",
+    "get_api_key",
+    "get_rpc_url",
     "get_wallet_cache_scheduler",
-
-
-    
+    "is_native_sol",
+    "lamports_to_sol",
+    "parse_token_amount",
+    "parse_transaction_error",
+    "sol_to_lamports",
+    "truncate_address",
+    "validate_private_key",
+    "validate_solana_address",
+    "verify_solana_signature",
+    # Key utilities
+    "get_wallet_keypair",
+    "get_wallet_key",
+    "get_private_key",
+    "get_public_key",
+    # Plugin integration
+    "solana_plugin",
+    "PluginManifest",
+    "ProviderDefinition",
+    "wallet_provider",
+    "init_plugin",
+    "SolanaPluginService",
+    # Environment helpers
+    "load_solana_config",
+    "SolanaConfig",
     # Constants
     "NATIVE_SOL_ADDRESS",
     "TOKEN_ADDRESSES",
     "DEFAULT_SLIPPAGE_BPS",
     "JUPITER_PRIORITY_LEVELS",
-
-    # Types
+    # Typed models
     "WalletPortfolio",
     "Item",
     "Prices",
     "TransferContent",
     "SwapContent",
     "KeypairResult",
-    "TokenMetadata"
+    "TokenMetadata",
 ]

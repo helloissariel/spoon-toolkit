@@ -1,8 +1,4 @@
-"""Solana blockchain service tools
-
-This module provides comprehensive blockchain service tools,
-corresponding to the SolanaService class from plugin-solana service.ts.
-"""
+"""Solana blockchain service tools，this module provides comprehensive blockchain service tools,"""
 
 import asyncio
 import contextlib
@@ -19,9 +15,7 @@ from typing import Any, Awaitable, Callable, Dict, List, Optional, Sequence, Uni
 import base58
 import base64
 import httpx
-from pydantic import Field
 
-from spoon_ai.tools.base import BaseTool, ToolResult
 from .constants import (
     BIRDEYE_API_BASE_URL,
     ENV_KEYS,
@@ -39,30 +33,14 @@ from .constants import (
 )
 from .keypairUtils import get_wallet_keypair
 
-try:  # pragma: no cover - optional dependency
-    from solana.rpc.async_api import AsyncClient
-except Exception:  # pragma: no cover - avoid hard dependency during import time
-    AsyncClient = None  # type: ignore[assignment]
+from solana.rpc.async_api import AsyncClient
+from solders.keypair import Keypair
+from solders.pubkey import Pubkey
 
-try:  # pragma: no cover - optional dependency
-    from solders.keypair import Keypair
-    from solders.pubkey import Pubkey
-except Exception:  # pragma: no cover
-    Keypair = None  # type: ignore[assignment]
-    Pubkey = None  # type: ignore[assignment]
+from solana.rpc.websocket_api import connect as solana_ws_connect
 
-try:  # pragma: no cover - optional dependency
-    from solana.rpc.websocket_api import connect as solana_ws_connect
-except Exception:  # pragma: no cover
-    solana_ws_connect = None  # type: ignore[assignment]
 
 logger = logging.getLogger(__name__)
-
-
-# ---------------------------------------------------------------------------
-# Module-level helpers (previously in utils.py)
-# ---------------------------------------------------------------------------
-
 
 def get_env_value(keys: List[str], default: Optional[str] = None) -> Optional[str]:
     """Return the first non-empty environment variable from the provided keys."""
@@ -72,11 +50,9 @@ def get_env_value(keys: List[str], default: Optional[str] = None) -> Optional[st
             return value
     return default
 
-
 def get_rpc_url() -> str:
     """Resolve the default Solana RPC URL from environment configuration."""
     return get_env_value(ENV_KEYS["RPC_URL"]) or "https://api.mainnet-beta.solana.com"
-
 
 def get_api_key(service: str) -> Optional[str]:
     """Retrieve API keys (Helius/Birdeye) using the same semantics as the plugin."""
@@ -88,7 +64,6 @@ def get_api_key(service: str) -> Optional[str]:
     if not keys:
         return None
     return get_env_value(keys)
-
 
 def validate_solana_address(address: Optional[str]) -> bool:
     """Validate that a string is a well-formed Solana public key."""
@@ -109,7 +84,6 @@ def validate_solana_address(address: Optional[str]) -> bool:
     except Exception:
         return False
 
-
 def validate_private_key(private_key: Optional[str]) -> bool:
     """Validate Solana private key material (base58 or base64 encoded)."""
     if not private_key or not isinstance(private_key, str):
@@ -129,11 +103,9 @@ def validate_private_key(private_key: Optional[str]) -> bool:
     except Exception:
         return False
 
-
 def lamports_to_sol(lamports: int) -> float:
     """Convert lamports to SOL."""
     return lamports / LAMPORTS_PER_SOL
-
 
 def sol_to_lamports(sol: Union[float, str]) -> int:
     """Convert SOL to lamports using precise decimal arithmetic."""
@@ -149,11 +121,9 @@ def sol_to_lamports(sol: Union[float, str]) -> int:
         )
     return int(lamports_decimal)
 
-
 def format_token_amount(amount: Union[int, str], decimals: int) -> float:
     """Format raw token amount to UI units."""
     return float(amount) / (10 ** decimals)
-
 
 def parse_token_amount(amount: Union[float, str], decimals: int) -> int:
     """Parse human-readable token amount into raw units."""
@@ -184,11 +154,8 @@ def is_native_sol(token_address: Optional[str]) -> bool:
         or token_address == "0x0000000000000000000000000000000000000000"
     )
 
-
 async def get_mint_program_id(client: Any, mint_address: str) -> str:
     """Detect which token program owns a mint (legacy SPL or Token-2022)."""
-    if not Pubkey:
-        raise RuntimeError("solders dependency not available")
     from .constants import TOKEN_PROGRAM_ID as LEGACY_TOKEN_PROGRAM_ID
 
     mint_pubkey = Pubkey.from_string(mint_address)
@@ -201,7 +168,6 @@ async def get_mint_program_id(client: Any, mint_address: str) -> str:
     if owner_str == TOKEN_2022_PROGRAM_ID:
         return TOKEN_2022_PROGRAM_ID
     raise ValueError(f"Mint {mint_address} is not owned by a known token program. Owner: {owner_str}")
-
 
 def get_associated_token_address_for_program(owner_address: str, mint_address: str, program_id: str) -> str:
     """Derive the associated token address for a specific token program."""
@@ -220,8 +186,6 @@ def get_associated_token_address_for_program(owner_address: str, mint_address: s
 
 def get_associated_token_address(mint_address: str, owner_address: str) -> str:
     """Derive the default associated token account (legacy token program)."""
-    if not Pubkey:
-        raise RuntimeError("solders dependency not available")
     try:
         from spl.token.instructions import get_associated_token_address as derive_ata  # type: ignore
     except Exception as exc:
@@ -575,7 +539,6 @@ async def fetch_prices_with_cache(force_refresh: bool = False) -> Dict[str, Dict
     _PRICE_CACHE[cache_key] = {"data": prices, "timestamp": now}
     return prices
 
-
 async def get_portfolio_overview(
     rpc_url: str,
     address: str,
@@ -617,8 +580,7 @@ class _AccountSubscription:
 
 
 class SolanaService:
-    """Python implementation mirroring plugin-solana's SolanaService."""
-
+    
     service_type: str = SOLANA_SERVICE_NAME
     capability_description: str = (
         "The agent is able to interact with the Solana blockchain, "
@@ -652,10 +614,6 @@ class SolanaService:
         self._update_task: Optional[asyncio.Task] = None
         self._running = False
         self._cache_lock = asyncio.Lock()
-
-    # ------------------------------------------------------------------
-    # Lifecycle management
-    # ------------------------------------------------------------------
 
     @classmethod
     async def start(cls, runtime: Any) -> "SolanaService":
@@ -826,10 +784,6 @@ class SolanaService:
             except Exception as exc:  # pragma: no cover - background task resilience
                 logger.warning("solana::updateWalletData failed: %s", exc)
             await asyncio.sleep(self.update_interval)
-
-    # ------------------------------------------------------------------
-    # Core service API
-    # ------------------------------------------------------------------
 
     def getConnection(self) -> Optional[AsyncClient]:
         return self.connection
@@ -1197,10 +1151,6 @@ class SolanaService:
             ttl_seconds=self.update_interval,
         )
 
-    # ------------------------------------------------------------------
-    # Address utilities
-    # ------------------------------------------------------------------
-
     def isValidSolanaAddress(self, address: str, onCurveOnly: bool = False) -> bool:
         if not validate_solana_address(address):
             return False
@@ -1235,10 +1185,6 @@ class SolanaService:
         publicKeyBase58: str,
     ) -> bool:
         return verify_solana_signature(message, signatureBase64, publicKeyBase58)
-
-    # ------------------------------------------------------------------
-    # Token account utilities
-    # ------------------------------------------------------------------
 
     def _token_cache_key(self, wallet_address: str) -> str:
         return self._TOKEN_CACHE_TEMPLATE.format(addr=wallet_address)
@@ -1648,10 +1594,6 @@ class SolanaService:
 
         return responses
 
-    # ------------------------------------------------------------------
-    # Subscription helpers
-    # ------------------------------------------------------------------
-
     @staticmethod
     def _normalise_ws_url(rpc_url: str) -> str:
         if rpc_url.startswith(("wss://", "ws://")):
@@ -1820,10 +1762,6 @@ class SolanaService:
                 if hasattr(subscription, "task") and subscription.task:
                     await subscription.task
 
-    # ------------------------------------------------------------------
-    # Utility helpers
-    # ------------------------------------------------------------------
-
     def _extract_value(self, response: Any) -> Any:
         if response is None:
             return None
@@ -1859,1061 +1797,6 @@ class SolanaService:
         return results
 
     batch_get_multiple_accounts_info = batchGetMultipleAccountsInfo
-
-
-class SolanaNetworkInfoTool(BaseTool):
-    """Tool for getting Solana network information."""
-
-    name: str = "solana_network_info"
-    description: str = "Get Solana network status and information"
-    parameters: dict = {
-        "type": "object",
-        "properties": {
-            "rpc_url": {
-                "type": "string",
-                "description": "Solana RPC endpoint URL"
-            },
-            "include_validators": {
-                "type": "boolean",
-                "description": "Include validator information",
-                "default": False
-            }
-        },
-        "required": [],
-    }
-
-    rpc_url: Optional[str] = Field(default=None)
-    include_validators: bool = Field(default=False)
-
-    async def execute(
-        self,
-        rpc_url: Optional[str] = None,
-        include_validators: bool = False
-    ) -> ToolResult:
-        """Execute network info query."""
-        try:
-            rpc_url = rpc_url or self.rpc_url or get_rpc_url()
-            include_validators = include_validators if include_validators is not None else self.include_validators
-
-            # Import dependencies
-            try:
-                from solana.rpc.async_api import AsyncClient
-            except ImportError as e:
-                return ToolResult(error=f"Solana dependencies not available: {str(e)}")
-
-            async with AsyncClient(rpc_url) as client:
-                # Get basic network info
-                version = await client.get_version()
-                epoch_info = await client.get_epoch_info()
-                slot = await client.get_slot()
-                block_height = await client.get_block_height()
-
-                result = {
-                    "rpc_url": rpc_url,
-                    "solana_core_version": version.value.solana_core if version.value else "unknown",
-                    "current_slot": slot.value if slot.value else 0,
-                    "block_height": block_height.value if block_height.value else 0,
-                    "epoch": epoch_info.value.epoch if epoch_info.value else 0,
-                    "slot_index": epoch_info.value.slot_index if epoch_info.value else 0,
-                    "slots_in_epoch": epoch_info.value.slots_in_epoch if epoch_info.value else 0
-                }
-
-                # Get transaction count
-                try:
-                    tx_count = await client.get_transaction_count()
-                    result["total_transactions"] = tx_count.value if tx_count.value else 0
-                except Exception as e:
-                    logger.debug(f"Failed to get transaction count: {e}")
-
-                # Get supply info
-                try:
-                    supply = await client.get_supply()
-                    if supply.value:
-                        result["total_supply"] = {
-                            "total": lamports_to_sol(supply.value.total),
-                            "circulating": lamports_to_sol(supply.value.circulating),
-                            "non_circulating": lamports_to_sol(supply.value.non_circulating)
-                        }
-                except Exception as e:
-                    logger.debug(f"Failed to get supply info: {e}")
-
-                # Get validator info if requested
-                if include_validators:
-                    try:
-                        vote_accounts = await client.get_vote_accounts()
-                        if vote_accounts.value:
-                            result["validators"] = {
-                                "current_count": len(vote_accounts.value.current),
-                                "delinquent_count": len(vote_accounts.value.delinquent),
-                                "total_stake": sum(
-                                    acc.activated_stake for acc in vote_accounts.value.current
-                                )
-                            }
-                    except Exception as e:
-                        logger.debug(f"Failed to get validator info: {e}")
-
-                return ToolResult(output=result)
-
-        except Exception as e:
-            logger.error(f"SolanaNetworkInfoTool error: {e}")
-            return ToolResult(error=f"Network info query failed: {str(e)}")
-
-
-class SolanaBlockTool(BaseTool):
-    """Tool for getting block information."""
-
-    name: str = "solana_block_info"
-    description: str = "Get information about a specific Solana block"
-    parameters: dict = {
-        "type": "object",
-        "properties": {
-            "rpc_url": {
-                "type": "string",
-                "description": "Solana RPC endpoint URL"
-            },
-            "slot": {
-                "type": "integer",
-                "description": "Block slot number. If omitted, gets latest block."
-            },
-            "include_transactions": {
-                "type": "boolean",
-                "description": "Include transaction details",
-                "default": False
-            }
-        },
-        "required": [],
-    }
-
-    rpc_url: Optional[str] = Field(default=None)
-    slot: Optional[int] = Field(default=None)
-    include_transactions: bool = Field(default=False)
-
-    async def execute(
-        self,
-        rpc_url: Optional[str] = None,
-        slot: Optional[int] = None,
-        include_transactions: bool = False
-    ) -> ToolResult:
-        """Execute block info query."""
-        try:
-            rpc_url = rpc_url or self.rpc_url or get_rpc_url()
-            slot = slot if slot is not None else self.slot
-            include_transactions = include_transactions if include_transactions is not None else self.include_transactions
-
-            # Import dependencies
-            try:
-                from solana.rpc.async_api import AsyncClient
-            except ImportError as e:
-                return ToolResult(error=f"Solana dependencies not available: {str(e)}")
-
-            async with AsyncClient(rpc_url) as client:
-                # Get current slot if not specified
-                if slot is None:
-                    slot_response = await client.get_slot()
-                    if not slot_response.value:
-                        return ToolResult(error="Failed to get current slot")
-                    slot = slot_response.value
-
-                # Get block info
-                encoding = "jsonParsed" if include_transactions else "json"
-                block = await client.get_block(
-                    slot,
-                    encoding=encoding
-                    # Removed max_supported_transaction_version=0 to support v1+ transactions
-                )
-
-                if not block.value:
-                    return ToolResult(error=f"Block not found for slot {slot}")
-
-                block_data = block.value
-
-                result = {
-                    "slot": slot,
-                    "block_hash": block_data.blockhash,
-                    "previous_block_hash": block_data.previous_blockhash,
-                    "parent_slot": block_data.parent_slot,
-                    "block_time": block_data.block_time,
-                    "transaction_count": len(block_data.transactions) if block_data.transactions else 0
-                }
-
-                # Add transaction details if requested
-                if include_transactions and block_data.transactions:
-                    transactions = []
-                    for tx in block_data.transactions[:10]:  # Limit to 10 for performance
-                        tx_info = {
-                            "signatures": tx.transaction.signatures if hasattr(tx.transaction, 'signatures') else [],
-                            "success": tx.meta.err is None if tx.meta else False
-                        }
-                        if tx.meta:
-                            tx_info.update({
-                                "fee": tx.meta.fee,
-                                "compute_units_consumed": getattr(tx.meta, 'compute_units_consumed', None)
-                            })
-                        transactions.append(tx_info)
-
-                    result["transactions"] = transactions
-                    result["showing_transactions"] = len(transactions)
-
-                # Get block production info
-                try:
-                    block_production = await client.get_block_production_with_config(
-                        {"range": {"firstSlot": slot, "lastSlot": slot}}
-                    )
-                    if block_production.value and block_production.value.by_identity:
-                        result["leader"] = list(block_production.value.by_identity.keys())[0]
-                except Exception as e:
-                    logger.debug(f"Failed to get block production info: {e}")
-
-                return ToolResult(output=result)
-
-        except Exception as e:
-            logger.error(f"SolanaBlockTool error: {e}")
-            return ToolResult(error=f"Block info query failed: {str(e)}")
-
-
-class SolanaTransactionTool(BaseTool):
-    """Tool for getting transaction information."""
-
-    name: str = "solana_transaction_info"
-    description: str = "Get detailed information about a Solana transaction"
-    parameters: dict = {
-        "type": "object",
-        "properties": {
-            "rpc_url": {
-                "type": "string",
-                "description": "Solana RPC endpoint URL"
-            },
-            "signature": {
-                "type": "string",
-                "description": "Transaction signature"
-            },
-            "include_accounts": {
-                "type": "boolean",
-                "description": "Include account information",
-                "default": True
-            }
-        },
-        "required": ["signature"],
-    }
-
-    rpc_url: Optional[str] = Field(default=None)
-    signature: Optional[str] = Field(default=None)
-    include_accounts: bool = Field(default=True)
-
-    async def execute(
-        self,
-        rpc_url: Optional[str] = None,
-        signature: Optional[str] = None,
-        include_accounts: bool = True
-    ) -> ToolResult:
-        """Execute transaction info query."""
-        try:
-            rpc_url = rpc_url or self.rpc_url or get_rpc_url()
-            signature = signature or self.signature
-            include_accounts = include_accounts if include_accounts is not None else self.include_accounts
-
-            if not signature:
-                return ToolResult(error="Transaction signature is required")
-
-            # Import dependencies
-            try:
-                from solana.rpc.async_api import AsyncClient
-            except ImportError as e:
-                return ToolResult(error=f"Solana dependencies not available: {str(e)}")
-
-            async with AsyncClient(rpc_url) as client:
-                # Get transaction info
-                tx = await client.get_transaction(
-                    signature,
-                    encoding="jsonParsed"
-                    # Removed max_supported_transaction_version=0 to support v1+ transactions
-                )
-
-                if not tx.value:
-                    return ToolResult(error=f"Transaction not found: {signature}")
-
-                tx_data = tx.value
-
-                result = {
-                    "signature": signature,
-                    "slot": tx_data.slot,
-                    "block_time": tx_data.block_time,
-                    "success": tx_data.transaction.meta.err is None if tx_data.transaction.meta else False
-                }
-
-                # Add metadata
-                if tx_data.transaction.meta:
-                    meta = tx_data.transaction.meta
-                    result.update({
-                        "fee": meta.fee,
-                        "compute_units_consumed": getattr(meta, 'compute_units_consumed', None),
-                        "pre_balances": meta.pre_balances,
-                        "post_balances": meta.post_balances,
-                        "log_messages": meta.log_messages[:10] if meta.log_messages else []  # Limit logs
-                    })
-
-                    if meta.err:
-                        result["error"] = str(meta.err)
-
-                # Add instruction info
-                if tx_data.transaction.transaction.message.instructions:
-                    instructions = []
-                    for inst in tx_data.transaction.transaction.message.instructions:
-                        inst_info = {
-                            "program_id": str(inst.program_id),
-                            "accounts": [str(acc) for acc in inst.accounts] if hasattr(inst, 'accounts') else []
-                        }
-                        if hasattr(inst, 'parsed'):
-                            inst_info["parsed"] = inst.parsed
-                        instructions.append(inst_info)
-
-                    result["instructions"] = instructions[:5]  # Limit for readability
-
-                # Add account info if requested
-                if include_accounts and tx_data.transaction.transaction.message.account_keys:
-                    accounts = []
-                    for acc in tx_data.transaction.transaction.message.account_keys[:10]:  # Limit accounts
-                        accounts.append({
-                            "pubkey": str(acc.pubkey),
-                            "signer": acc.signer,
-                            "writable": acc.writable
-                        })
-                    result["accounts"] = accounts
-
-                return ToolResult(output=result)
-
-        except Exception as e:
-            logger.error(f"SolanaTransactionTool error: {e}")
-            return ToolResult(error=f"Transaction info query failed: {str(e)}")
-
-
-class SolanaProgramTool(BaseTool):
-    """Tool for getting program account information."""
-
-    name: str = "solana_program_info"
-    description: str = "Get information about a Solana program"
-    parameters: dict = {
-        "type": "object",
-        "properties": {
-            "rpc_url": {
-                "type": "string",
-                "description": "Solana RPC endpoint URL"
-            },
-            "program_id": {
-                "type": "string",
-                "description": "Program ID address"
-            },
-            "include_accounts": {
-                "type": "boolean",
-                "description": "Include associated accounts (disabled for safety - see alternatives in response)",
-                "default": False
-            },
-            "account_limit": {
-                "type": "integer",
-                "description": "Dev override: set to 999 to force enumeration for small programs only",
-                "default": 10,
-                "maximum": 999
-            }
-        },
-        "required": ["program_id"],
-    }
-
-    rpc_url: Optional[str] = Field(default=None)
-    program_id: Optional[str] = Field(default=None)
-    include_accounts: bool = Field(default=False)
-    account_limit: int = Field(default=10)
-
-    async def execute(
-        self,
-        rpc_url: Optional[str] = None,
-        program_id: Optional[str] = None,
-        include_accounts: bool = False,
-        account_limit: int = 10
-    ) -> ToolResult:
-        """Execute program info query."""
-        try:
-            rpc_url = rpc_url or self.rpc_url or get_rpc_url()
-            program_id = program_id or self.program_id
-            include_accounts = include_accounts if include_accounts is not None else self.include_accounts
-
-            # Handle account_limit with special dev override logic
-            raw_account_limit = account_limit if account_limit is not None else self.account_limit
-            is_dev_override = (raw_account_limit == 999)
-            account_limit = raw_account_limit if is_dev_override else min(raw_account_limit, 100)
-
-            if not program_id:
-                return ToolResult(error="Program ID is required")
-
-            if not validate_solana_address(program_id):
-                return ToolResult(error=f"Invalid program ID: {program_id}")
-
-            # Import dependencies
-            try:
-                from solana.rpc.async_api import AsyncClient
-                from solders.pubkey import Pubkey
-            except ImportError as e:
-                return ToolResult(error=f"Solana dependencies not available: {str(e)}")
-
-            async with AsyncClient(rpc_url) as client:
-                program_pubkey = Pubkey.from_string(program_id)
-
-                # Get program account info
-                account_info = await client.get_account_info(program_pubkey)
-
-                if not account_info.value:
-                    return ToolResult(error=f"Program account not found: {program_id}")
-
-                result = {
-                    "program_id": program_id,
-                    "owner": str(account_info.value.owner),
-                    "executable": account_info.value.executable,
-                    "lamports": account_info.value.lamports,
-                    "sol_balance": lamports_to_sol(account_info.value.lamports),
-                    "data_length": len(account_info.value.data)
-                }
-
-                # Check if it's a known program
-                known_programs = {
-                    TOKEN_PROGRAM_ID: "SPL Token Program",
-                    TOKEN_2022_PROGRAM_ID: "SPL Token 2022 Program",
-                    METADATA_PROGRAM_ID: "Metaplex Token Metadata Program",
-                    "11111111111111111111111111111111": "System Program",
-                    "Vote111111111111111111111111111111111111111": "Vote Program",
-                    "Stake11111111111111111111111111111111111111": "Stake Program"
-                }
-
-                if program_id in known_programs:
-                    result["program_name"] = known_programs[program_id]
-
-                # IMPORTANT: Program account enumeration is inherently unsafe for production use
-                # Solana RPC get_program_accounts has no server-side limits and will attempt
-                # to return ALL accounts for a program, which can be millions of entries.
-                if include_accounts:
-                    result["accounts_enumeration_disabled"] = True
-                    result["reason"] = ("Program account enumeration is disabled for safety. "
-                                      "Solana RPC has no server-side limits, so any program "
-                                      "with >1000 accounts risks timeout/memory exhaustion.")
-                    result["alternatives"] = [
-                        "Use getTokenAccountsByOwner for token accounts",
-                        "Use getProgramAccounts with specific filters",
-                        "Query specific account addresses directly",
-                        "Use indexing services (Helius, TheGraph) for bulk queries"
-                    ]
-                    result["associated_accounts"] = []
-                    result["total_accounts"] = "Enumeration disabled"
-                    result["showing_accounts"] = 0
-
-                    # Only provide a manual override for development/testing
-                    if is_dev_override:  # Special flag for override
-                        result["dev_override_warning"] = ("Using development override. "
-                                                         "This may timeout or fail for large programs.")
-                        try:
-                            from solana.rpc.types import DataSliceOpts
-
-                            accounts = await asyncio.wait_for(
-                                client.get_program_accounts(
-                                    program_pubkey,
-                                    encoding="base64",
-                                    data_slice=DataSliceOpts(offset=0, length=0)
-                                ),
-                                timeout=3.0  # Very short timeout
-                            )
-
-                            if accounts.value:
-                                # Emergency brake: if we got >100 accounts, refuse to process
-                                if len(accounts.value) > 100:
-                                    result["dev_override_failed"] = f"Got {len(accounts.value)} accounts, too many even for dev mode"
-                                else:
-                                    account_list = []
-                                    for acc in accounts.value[:10]:  # Max 10 accounts even in dev mode
-                                        account_list.append({
-                                            "pubkey": str(acc.pubkey),
-                                            "lamports": acc.account.lamports,
-                                            "owner": str(acc.account.owner),
-                                            "data_length": 0  # No data in dev mode
-                                        })
-                                    result["associated_accounts"] = account_list
-                                    result["total_accounts"] = len(accounts.value)
-                                    result["showing_accounts"] = len(account_list)
-
-                        except asyncio.TimeoutError:
-                            result["dev_override_failed"] = "Timed out even with 3s limit"
-                        except Exception as e:
-                            result["dev_override_failed"] = f"Error: {str(e)}"
-
-                return ToolResult(output=result)
-
-        except Exception as e:
-            logger.error(f"SolanaProgramTool error: {e}")
-            return ToolResult(error=f"Program info query failed: {str(e)}")
-
-
-class SolanaMarketDataTool(BaseTool):
-    """Tool for getting market data from Birdeye API."""
-
-    name: str = "solana_market_data"
-    description: str = "Get market data for SOL and other tokens"
-    parameters: dict = {
-        "type": "object",
-        "properties": {
-            "token_address": {
-                "type": "string",
-                "description": "Token address to get market data for"
-            },
-            "include_history": {
-                "type": "boolean",
-                "description": "Include price history",
-                "default": False
-            },
-            "timeframe": {
-                "type": "string",
-                "enum": ["1H", "4H", "1D", "1W"],
-                "description": "Price history timeframe",
-                "default": "1D"
-            }
-        },
-        "required": ["token_address"],
-    }
-
-    token_address: Optional[str] = Field(default=None)
-    include_history: bool = Field(default=False)
-    timeframe: str = Field(default="1D")
-
-    async def execute(
-        self,
-        token_address: Optional[str] = None,
-        include_history: bool = False,
-        timeframe: str = "1D"
-    ) -> ToolResult:
-        """Execute market data query."""
-        try:
-            token_address = token_address or self.token_address
-            include_history = include_history if include_history is not None else self.include_history
-            timeframe = timeframe or self.timeframe
-
-            if not token_address:
-                return ToolResult(error="Token address is required")
-
-            if not validate_solana_address(token_address):
-                return ToolResult(error=f"Invalid Solana address format: {token_address}")
-
-            api_key = get_api_key("birdeye")
-            if not api_key:
-                return ToolResult(error="Birdeye API key not configured")
-
-            headers = create_request_headers(api_key)
-
-            # Get current price
-            price_url = f"{BIRDEYE_API_BASE_URL}/defi/price"
-            async with httpx.AsyncClient() as client:
-                price_response = await client.get(
-                    price_url,
-                    params={"address": token_address},
-                    headers=headers,
-                    timeout=10
-                )
-
-            if price_response.status_code != 200:
-                return ToolResult(error=f"Price API error: {price_response.status_code}")
-
-            price_data = price_response.json()
-            if not price_data.get("success"):
-                return ToolResult(error="Failed to get price data")
-
-            result = {
-                "token_address": token_address,
-                "price_usd": float(price_data["data"]["value"]),
-                "price_change_24h": float(price_data["data"].get("priceChange24h", 0)),
-                "timestamp": price_data["data"].get("updateUnixTime", 0)
-            }
-
-            # Get additional market data
-            try:
-                overview_url = f"{BIRDEYE_API_BASE_URL}/defi/token_overview"
-                async with httpx.AsyncClient() as client:
-                    overview_response = await client.get(
-                        overview_url,
-                        params={"address": token_address},
-                        headers=headers,
-                        timeout=10
-                    )
-
-                if overview_response.status_code == 200:
-                    overview_data = overview_response.json()
-                    if overview_data.get("success") and overview_data.get("data"):
-                        data = overview_data["data"]
-                        result.update({
-                            "market_cap": float(data.get("mc", 0)),
-                            "volume_24h": float(data.get("v24hUSD", 0)),
-                            "liquidity": float(data.get("liquidity", 0)),
-                            "holders": data.get("holder", 0)
-                        })
-
-            except Exception as e:
-                logger.debug(f"Failed to get overview data: {e}")
-
-            # Get price history if requested
-            if include_history:
-                try:
-                    history_url = f"{BIRDEYE_API_BASE_URL}/defi/history_price"
-                    async with httpx.AsyncClient() as client:
-                        history_response = await client.get(
-                            history_url,
-                            params={
-                                "address": token_address,
-                                "address_type": "token",
-                                "type": timeframe.lower()
-                            },
-                            headers=headers,
-                            timeout=15
-                        )
-
-                    if history_response.status_code == 200:
-                        history_data = history_response.json()
-                        if history_data.get("success") and history_data.get("data"):
-                            result["price_history"] = history_data["data"]["items"][:50]  # Limit history
-                            result["timeframe"] = timeframe
-
-                except Exception as e:
-                    logger.debug(f"Failed to get price history: {e}")
-                    result["history_error"] = "Failed to get price history"
-
-            return ToolResult(output=result)
-
-        except Exception as e:
-            logger.error(f"SolanaMarketDataTool error: {e}")
-            return ToolResult(error=f"Market data query failed: {str(e)}")
-
-
-def classify_address_type(account_info) -> str:
-    """Classify address type based on account info using rich heuristics.
-
-    This unified logic is used by both single and batch address analysis.
-    """
-    try:
-        if not account_info:
-            return "Account does not exist"
-
-        data_length = len(account_info.data)
-
-        if data_length == 0:
-            return "Wallet"
-        elif data_length == 165:
-            return "Token Account"
-        elif data_length == 82:
-            return "Token Mint"
-        elif str(account_info.owner) == TOKEN_PROGRAM_ID:
-            return "SPL Token Related"
-        elif str(account_info.owner) == TOKEN_2022_PROGRAM_ID:
-            return "SPL Token 2022 Related"
-        elif account_info.executable:
-            return "Program"
-        else:
-            return "Program Derived Account"
-
-    except Exception as e:
-        return f"Error: {str(e)}"
-
-
-async def get_address_type(rpc_url: str, address: str) -> str:
-    """Get the type of a Solana address based on account data.
-
-    Args:
-        rpc_url: Solana RPC endpoint URL
-        address: Address to analyze
-
-    Returns:
-        String describing the address type
-    """
-    try:
-        from solana.rpc.async_api import AsyncClient
-        from solders.pubkey import Pubkey
-
-        async with AsyncClient(rpc_url) as client:
-            pubkey = Pubkey.from_string(address)
-            account_info = await client.get_account_info(pubkey)
-
-            return classify_address_type(account_info.value if account_info else None)
-
-    except Exception as e:
-        logger.error(f"Error getting address type: {e}")
-        return f"Error: {str(e)}"
-
-
-class SolanaAddressTypeTool(BaseTool):
-    """Tool for determining the type of a Solana address."""
-
-    name: str = "solana_address_type"
-    description: str = "Determine the type of a Solana address (wallet, token account, token mint, etc.)"
-    parameters: dict = {
-        "type": "object",
-        "properties": {
-            "rpc_url": {
-                "type": "string",
-                "description": "Solana RPC endpoint URL"
-            },
-            "address": {
-                "type": "string",
-                "description": "Solana address to analyze"
-            },
-            "batch_addresses": {
-                "type": "array",
-                "items": {"type": "string"},
-                "description": "Multiple addresses to analyze in batch"
-            }
-        },
-        "required": [],
-    }
-
-    rpc_url: Optional[str] = Field(default=None)
-    address: Optional[str] = Field(default=None)
-    batch_addresses: Optional[List[str]] = Field(default=None)
-
-    async def execute(
-        self,
-        rpc_url: Optional[str] = None,
-        address: Optional[str] = None,
-        batch_addresses: Optional[List[str]] = None
-    ) -> ToolResult:
-        """Execute address type analysis."""
-        try:
-            rpc_url = rpc_url or self.rpc_url or get_rpc_url()
-            address = address or self.address
-            batch_addresses = batch_addresses or self.batch_addresses
-
-            if not address and not batch_addresses:
-                return ToolResult(error="Either 'address' or 'batch_addresses' must be provided")
-
-            if address and batch_addresses:
-                return ToolResult(error="Cannot specify both 'address' and 'batch_addresses'")
-
-            # Single address analysis
-            if address:
-                if not validate_solana_address(address):
-                    return ToolResult(error=f"Invalid Solana address: {address}")
-
-                address_type = await get_address_type(rpc_url, address)
-
-                return ToolResult(output={
-                    "address": address,
-                    "type": address_type,
-                    "analysis_time": "single"
-                })
-
-            # Batch address analysis - use single client for all addresses
-            else:
-                for addr in batch_addresses:
-                    if not validate_solana_address(addr):
-                        return ToolResult(error=f"Invalid Solana address: {addr}")
-
-                # Import dependencies for batch processing
-                try:
-                    from solana.rpc.async_api import AsyncClient
-                    from solders.pubkey import Pubkey
-                except ImportError as e:
-                    return ToolResult(error=f"Solana dependencies not available: {str(e)}")
-
-                # Check if truncation is needed and warn user
-                max_batch_size = 20
-                addresses_to_process = batch_addresses[:max_batch_size]
-                was_truncated = len(batch_addresses) > max_batch_size
-
-                results = {}
-                async with AsyncClient(rpc_url) as client:
-                    for addr in addresses_to_process:
-                        try:
-                            pubkey = Pubkey.from_string(addr)
-                            account_info = await client.get_account_info(pubkey)
-
-                            # Use unified classification logic
-                            addr_type = classify_address_type(account_info.value if account_info else None)
-                            results[addr] = addr_type
-
-                        except Exception as e:
-                            results[addr] = f"Error: {str(e)}"
-
-                response = {
-                    "addresses_requested": batch_addresses,
-                    "addresses_processed": addresses_to_process,
-                    "results": results,
-                    "total_requested": len(batch_addresses),
-                    "total_analyzed": len(results),
-                    "analysis_time": "batch_optimized"
-                }
-
-                if was_truncated:
-                    response["warning"] = f"Only first {max_batch_size} addresses processed due to performance limits"
-                    response["truncated"] = True
-                    response["skipped_count"] = len(batch_addresses) - max_batch_size
-                else:
-                    response["truncated"] = False
-
-                return ToolResult(output=response)
-
-        except Exception as e:
-            logger.error(f"SolanaAddressTypeTool error: {e}")
-            return ToolResult(error=f"Address type analysis failed: {str(e)}")
-
-
-class SolanaAccountMonitorTool(BaseTool):
-    """Tool for monitoring Solana account changes via WebSocket subscription."""
-
-    name: str = "solana_account_monitor"
-    description: str = "Monitor Solana account changes in real-time"
-    parameters: dict = {
-        "type": "object",
-        "properties": {
-            "rpc_url": {
-                "type": "string",
-                "description": "Solana RPC WebSocket endpoint URL"
-            },
-            "account_address": {
-                "type": "string",
-                "description": "Account address to monitor"
-            },
-            "action": {
-                "type": "string",
-                "enum": ["subscribe", "unsubscribe", "check_status"],
-                "description": "Action to perform",
-                "default": "subscribe"
-            },
-            "encoding": {
-                "type": "string",
-                "enum": ["base58", "base64", "jsonParsed"],
-                "description": "Data encoding format",
-                "default": "jsonParsed"
-            },
-            "commitment": {
-                "type": "string",
-                "enum": ["processed", "confirmed", "finalized"],
-                "description": "Commitment level",
-                "default": "finalized"
-            }
-        },
-        "required": ["account_address"],
-    }
-
-    rpc_url: Optional[str] = Field(default=None)
-    account_address: Optional[str] = Field(default=None)
-    action: str = Field(default="subscribe")
-    encoding: str = Field(default="jsonParsed")
-    commitment: str = Field(default="finalized")
-
-    # Class-level subscription tracking
-    _subscriptions: Dict[str, _AccountSubscription] = {}
-    _subscription_lock: Optional[asyncio.Lock] = None
-
-    @classmethod
-    def _ensure_lock(cls) -> asyncio.Lock:
-        if cls._subscription_lock is None:
-            cls._subscription_lock = asyncio.Lock()
-        return cls._subscription_lock
-
-    @staticmethod
-    def _normalise_ws_url(rpc_url: str) -> str:
-        if rpc_url.startswith("wss://") or rpc_url.startswith("ws://"):
-            return rpc_url
-        if rpc_url.startswith("https://"):
-            return "wss://" + rpc_url[len("https://") :]
-        if rpc_url.startswith("http://"):
-            return "ws://" + rpc_url[len("http://") :]
-        # Default to wss if no scheme provided
-        if rpc_url:
-            return "wss://" + rpc_url
-        return "wss://api.mainnet-beta.solana.com"
-
-    async def _listen_for_updates(self, subscription: _AccountSubscription) -> None:
-        try:
-            while True:
-                message = await subscription.websocket.recv()
-                if isinstance(message, (bytes, bytearray)):
-                    try:
-                        message = message.decode("utf-8")
-                    except Exception:
-                        continue
-                if isinstance(message, str):
-                    try:
-                        message = json.loads(message)
-                    except json.JSONDecodeError:
-                        continue
-                if not isinstance(message, dict):
-                    continue
-                result = message.get("result")
-                if isinstance(result, dict):
-                    subscription.last_update = result
-                    continue
-                params = message.get("params")
-                if isinstance(params, dict):
-                    param_result = params.get("result")
-                    if isinstance(param_result, dict):
-                        subscription.last_update = param_result
-        except asyncio.CancelledError:
-            raise
-        except Exception as exc:
-            subscription.last_error = str(exc)
-            logger.error("Account subscription listener error: %s", exc)
-        finally:
-            try:
-                await subscription.websocket.close()
-            except Exception:
-                pass
-            lock = self._ensure_lock()
-            async with lock:
-                self._subscriptions.pop(subscription.account_address, None)
-
-    async def _start_subscription(
-        self,
-        rpc_url: str,
-        account_address: str,
-        encoding: str,
-        commitment: str,
-    ) -> _AccountSubscription:
-        ws_url = self._normalise_ws_url(rpc_url)
-        try:
-            websocket = await solana_ws_connect(ws_url)
-        except Exception as exc:
-            raise RuntimeError(f"Failed to connect to WebSocket endpoint {ws_url}: {exc}") from exc
-
-        try:
-            response = await websocket.account_subscribe(
-                account_address,
-                commitment=commitment,
-                encoding=encoding,
-            )
-        except Exception as exc:
-            await websocket.close()
-            raise RuntimeError(f"Account subscription failed: {exc}") from exc
-
-        subscription_id = getattr(response, "result", None)
-        if subscription_id is None and isinstance(response, dict):
-            subscription_id = response.get("result")
-
-        if subscription_id is None:
-            await websocket.close()
-            raise RuntimeError("Account subscription did not return a subscription id")
-
-        subscription = _AccountSubscription(
-            account_address=account_address,
-            rpc_url=rpc_url,
-            ws_url=ws_url,
-            websocket=websocket,
-            subscription_id=subscription_id,
-            encoding=encoding,
-            commitment=commitment,
-        )
-        subscription.task = asyncio.create_task(self._listen_for_updates(subscription))
-
-
-    async def _stop_subscription(self, subscription: _AccountSubscription) -> None:
-        try:
-            await subscription.websocket.account_unsubscribe(subscription.subscription_id)
-        except Exception as exc:
-            logger.debug("Failed to unsubscribe account %s: %s", subscription.account_address, exc)
-        finally:
-            subscription.task.cancel()
-            try:
-                await subscription.task
-            except Exception:
-                pass
-
-    async def execute(
-        self,
-        rpc_url: Optional[str] = None,
-        account_address: Optional[str] = None,
-        action: str = "subscribe",
-        encoding: str = "jsonParsed",
-        commitment: str = "finalized"
-    ) -> ToolResult:
-        """Execute account monitoring operation."""
-        try:
-            rpc_url = rpc_url or self.rpc_url or get_rpc_url()
-            account_address = account_address or self.account_address
-            action = action or self.action
-            encoding = encoding or self.encoding
-            commitment = commitment or self.commitment
-
-            if not account_address:
-                return ToolResult(error="Account address is required")
-
-            if not validate_solana_address(account_address):
-                return ToolResult(error=f"Invalid account address: {account_address}")
-
-            if action == "subscribe":
-                lock = self._ensure_lock()
-                async with lock:
-                    subscription = self._subscriptions.get(account_address)
-
-                status = "already_subscribed"
-                if subscription is None:
-                    subscription = await self._start_subscription(rpc_url, account_address, encoding, commitment)
-                    lock = self._ensure_lock()
-                    async with lock:
-                        self._subscriptions[account_address] = subscription
-                    status = "subscribed"
-
-                return ToolResult(output={
-                    "action": "subscribe",
-                    "account_address": account_address,
-                    "subscription_id": subscription.subscription_id,
-                    "encoding": subscription.encoding,
-                    "commitment": subscription.commitment,
-                    "ws_endpoint": subscription.ws_url,
-                    "status": status,
-                    "last_update": subscription.last_update,
-                    "last_error": subscription.last_error,
-                })
-
-            elif action == "unsubscribe":
-                lock = self._ensure_lock()
-                async with lock:
-                    subscription = self._subscriptions.pop(account_address, None)
-
-                if not subscription:
-                    return ToolResult(error=f"No active subscription found for {account_address}")
-
-                await self._stop_subscription(subscription)
-
-                return ToolResult(output={
-                    "action": "unsubscribe",
-                    "account_address": account_address,
-                    "subscription_id": subscription.subscription_id,
-                    "status": "unsubscribed"
-                })
-
-            elif action == "check_status":
-                lock = self._ensure_lock()
-                async with lock:
-                    subscription = self._subscriptions.get(account_address)
-                    total = len(self._subscriptions)
-
-                if not subscription:
-                    return ToolResult(output={
-                        "action": "check_status",
-                        "account_address": account_address,
-                        "is_subscribed": False,
-                        "total_subscriptions": total,
-                    })
-
-                return ToolResult(output={
-                    "action": "check_status",
-                    "account_address": account_address,
-                    "is_subscribed": True,
-                    "subscription_id": subscription.subscription_id,
-                    "ws_endpoint": subscription.ws_url,
-                    "encoding": subscription.encoding,
-                    "commitment": subscription.commitment,
-                    "total_subscriptions": total,
-                    "last_update": subscription.last_update,
-                    "last_error": subscription.last_error,
-                })
-
-            else:
-                return ToolResult(error=f"Unknown action: {action}")
-
-        except Exception as e:
-            logger.error(f"SolanaAccountMonitorTool error: {e}")
-            return ToolResult(error=f"Account monitoring failed: {str(e)}")
-
 
 class _WalletCacheScheduler:
     """Background refresher for wallet portfolio data."""

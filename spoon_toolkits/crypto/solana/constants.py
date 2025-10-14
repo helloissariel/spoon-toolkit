@@ -1,8 +1,4 @@
-"""Solana toolkit constants
-
-This module defines constants used throughout the Solana toolkit,
-mirroring the functionality from the plugin-solana TypeScript implementation.
-"""
+"""Solana toolkit constants，This module defines constants used throughout the Solana toolkit"""
 
 # Service and Cache Configuration
 SOLANA_SERVICE_NAME = "chain_solana"
