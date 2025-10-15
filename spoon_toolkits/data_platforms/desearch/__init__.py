@@ -17,8 +17,8 @@ except ImportError:
 mcp_server = FastMCP("DesearchServer")
 
 # Mount sub-servers (using correct syntax with prefix)
-mcp_server.mount("ai_search", ai_search_server)
-mcp_server.mount("web_search", web_search_server)
+mcp_server.mount(ai_search_server)
+mcp_server.mount(web_search_server)
 
 # Export main functions for direct use
 try:

@@ -6,6 +6,7 @@ from typing import Optional
 from pydantic import Field
 
 from spoon_ai.tools.base import BaseTool, ToolResult
+from .signers import EvmSigner, SignerManager
 
 logger = logging.getLogger(__name__)
 
@@ -14,13 +15,12 @@ class EvmTransferTool(BaseTool):
     """Transfer native tokens on an EVM chain.
 
     Mirrors plugin-evm transfer behavior: sends a native value transfer with optional data.
-    Uses web3.py for broad compatibility in Python environments.
+    Supports both local private key and Turnkey secure signing.
     """
 
     name: str = "evm_transfer"
     description: str = (
-        "Transfer native tokens on an EVM chain. Requires RPC URL and private key; "
-        "supports optional data payload."
+        "Transfer native tokens on an EVM chain. Supports local and Turnkey secure signing."
     )
     parameters: dict = {
         "type": "object",
@@ -29,9 +29,23 @@ class EvmTransferTool(BaseTool):
                 "type": "string",
                 "description": "RPC endpoint for the target chain. If omitted, uses EVM_PROVIDER_URL env.",
             },
+            "signer_type": {
+                "type": "string",
+                "enum": ["local", "turnkey", "auto"],
+                "description": "Signing method: 'local' (private key), 'turnkey' (secure API), or 'auto' (detect from env)",
+                "default": "auto",
+            },
             "private_key": {
                 "type": "string",
-                "description": "Sender private key (0x-prefixed). If omitted, uses EVM_PRIVATE_KEY env.",
+                "description": "Sender private key (0x-prefixed). Required for local signing. If omitted, uses EVM_PRIVATE_KEY env.",
+            },
+            "turnkey_sign_with": {
+                "type": "string",
+                "description": "Turnkey signing identity (address/ID). Required for Turnkey signing. If omitted, uses TURNKEY_SIGN_WITH env.",
+            },
+            "turnkey_address": {
+                "type": "string",
+                "description": "Turnkey signer address. Optional for Turnkey signing. If omitted, uses TURNKEY_ADDRESS env.",
             },
             "to_address": {
                 "type": "string",
@@ -63,7 +77,10 @@ class EvmTransferTool(BaseTool):
     }
 
     rpc_url: Optional[str] = Field(default=None)
+    signer_type: str = Field(default="auto")
     private_key: Optional[str] = Field(default=None)
+    turnkey_sign_with: Optional[str] = Field(default=None)
+    turnkey_address: Optional[str] = Field(default=None)
     to_address: Optional[str] = Field(default=None)
     amount_ether: Optional[str] = Field(default=None)
     data: str = Field(default="0x")
@@ -74,7 +91,10 @@ class EvmTransferTool(BaseTool):
     async def execute(
         self,
         rpc_url: Optional[str] = None,
+        signer_type: Optional[str] = None,
         private_key: Optional[str] = None,
+        turnkey_sign_with: Optional[str] = None,
+        turnkey_address: Optional[str] = None,
         to_address: Optional[str] = None,
         amount_ether: Optional[str] = None,
         data: Optional[str] = None,
@@ -85,15 +105,16 @@ class EvmTransferTool(BaseTool):
         try:
             # Resolve inputs with env and defaults
             rpc_url = rpc_url or self.rpc_url or os.getenv("EVM_PROVIDER_URL") or os.getenv("RPC_URL")
-            private_key = private_key or self.private_key or os.getenv("EVM_PRIVATE_KEY")
+            signer_type = signer_type or self.signer_type
+            private_key = private_key or self.private_key
+            turnkey_sign_with = turnkey_sign_with or self.turnkey_sign_with
+            turnkey_address = turnkey_address or self.turnkey_address
             to_address = to_address or self.to_address
             amount_ether = amount_ether or self.amount_ether
             data = (data if data is not None else self.data) or "0x"
 
             if not rpc_url:
                 return ToolResult(error="Missing rpc_url and no EVM_PROVIDER_URL/RPC_URL set")
-            if not private_key or not private_key.startswith("0x"):
-                return ToolResult(error="Missing or invalid private_key; must be 0x-prefixed")
             if not to_address or not to_address.startswith("0x"):
                 return ToolResult(error="Missing or invalid to_address; must be 0x-prefixed")
             if not amount_ether:
@@ -109,13 +130,25 @@ class EvmTransferTool(BaseTool):
             if not w3.is_connected():
                 return ToolResult(error=f"Failed to connect to RPC: {rpc_url}")
 
-            account = w3.eth.account.from_key(private_key)
+            # Create signer
+            try:
+                signer = SignerManager.create_signer(
+                    signer_type=signer_type,
+                    private_key=private_key,
+                    turnkey_sign_with=turnkey_sign_with,
+                    turnkey_address=turnkey_address
+                )
+            except Exception as e:
+                return ToolResult(error=f"Failed to create signer: {str(e)}")
+
+            # Get signer address for transaction building
+            signer_address = await signer.get_address()
 
             # Build transaction
             value_wei = w3.to_wei(amount_ether, "ether")
             tx = {
                 "to": Web3.to_checksum_address(to_address),
-                "from": account.address,
+                "from": signer_address,
                 "value": value_wei,
                 "data": data if data and data != "null" else "0x",
             }
@@ -125,7 +158,7 @@ class EvmTransferTool(BaseTool):
                 tx["gas"] = gas_limit
             else:
                 try:
-                    tx["gas"] = w3.eth.estimate_gas({**tx, "from": account.address})
+                    tx["gas"] = w3.eth.estimate_gas({**tx, "from": signer_address})
                 except Exception:
                     # Fallback gas if estimation fails
                     tx["gas"] = 21000 if (tx["data"] == "0x") else 100000
@@ -142,7 +175,7 @@ class EvmTransferTool(BaseTool):
             if nonce is not None:
                 tx["nonce"] = nonce
             else:
-                tx["nonce"] = w3.eth.get_transaction_count(account.address)
+                tx["nonce"] = w3.eth.get_transaction_count(signer_address)
 
             # Chain ID
             try:
@@ -150,8 +183,9 @@ class EvmTransferTool(BaseTool):
             except Exception:
                 pass
 
-            signed = w3.eth.account.sign_transaction(tx, private_key)
-            tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
+            # Sign and send transaction using the signer
+            signed_tx_hex = await signer.sign_transaction(tx, rpc_url)
+            tx_hash = w3.eth.send_raw_transaction(signed_tx_hex)
 
             # Wait for receipt with timeout to avoid hanging
             def wait_receipt():
@@ -166,10 +200,11 @@ class EvmTransferTool(BaseTool):
             return ToolResult(
                 output={
                     "hash": tx_hash.hex(),
-                    "from": account.address,
+                    "from": signer_address,
                     "to": Web3.to_checksum_address(to_address),
                     "value_wei": str(value_wei),
                     "chainId": tx.get("chainId"),
+                    "signer_type": signer.signer_type,
                 }
             )
         except Exception as e:

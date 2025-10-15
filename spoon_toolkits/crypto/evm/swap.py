@@ -7,6 +7,7 @@ import requests
 from pydantic import Field
 
 from spoon_ai.tools.base import BaseTool, ToolResult
+from .signers import SignerManager
 
 logger = logging.getLogger(__name__)
 
@@ -19,13 +20,16 @@ class EvmSwapTool(BaseTool):
 
     name: str = "evm_swap"
     description: str = (
-        "Swap tokens on the same EVM chain using Bebop aggregator. Requires RPC URL, private key, and token addresses."
+        "Swap tokens on the same EVM chain using Bebop aggregator. Supports local and Turnkey secure signing."
     )
     parameters: dict = {
         "type": "object",
         "properties": {
             "rpc_url": {"type": "string", "description": "RPC endpoint. Defaults to EVM_PROVIDER_URL/RPC_URL env."},
-            "private_key": {"type": "string", "description": "Sender private key (0x-prefixed). Defaults to EVM_PRIVATE_KEY env."},
+            "signer_type": {"type": "string", "enum": ["local", "turnkey", "auto"], "description": "Signing method: 'local', 'turnkey', or 'auto'", "default": "auto"},
+            "private_key": {"type": "string", "description": "Sender private key (0x-prefixed). Required for local signing. Defaults to EVM_PRIVATE_KEY env."},
+            "turnkey_sign_with": {"type": "string", "description": "Turnkey signing identity (address/ID). Required for Turnkey signing. Defaults to TURNKEY_SIGN_WITH env."},
+            "turnkey_address": {"type": "string", "description": "Turnkey signer address. Optional for Turnkey signing. Defaults to TURNKEY_ADDRESS env."},
             "from_token": {"type": "string", "description": "Sell token address (0x...) or '0x000..000' for native"},
             "to_token": {"type": "string", "description": "Buy token address (0x...)"},
             "amount": {"type": "string", "description": "Sell amount (decimal)"},
@@ -36,7 +40,10 @@ class EvmSwapTool(BaseTool):
     }
 
     rpc_url: Optional[str] = Field(default=None)
+    signer_type: str = Field(default="auto")
     private_key: Optional[str] = Field(default=None)
+    turnkey_sign_with: Optional[str] = Field(default=None)
+    turnkey_address: Optional[str] = Field(default=None)
     from_token: Optional[str] = Field(default=None)
     to_token: Optional[str] = Field(default=None)
     amount: Optional[str] = Field(default=None)
@@ -55,7 +62,10 @@ class EvmSwapTool(BaseTool):
     async def execute(
         self,
         rpc_url: Optional[str] = None,
+        signer_type: Optional[str] = None,
         private_key: Optional[str] = None,
+        turnkey_sign_with: Optional[str] = None,
+        turnkey_address: Optional[str] = None,
         from_token: Optional[str] = None,
         to_token: Optional[str] = None,
         amount: Optional[str] = None,
@@ -64,7 +74,10 @@ class EvmSwapTool(BaseTool):
     ) -> ToolResult:
         try:
             rpc_url = rpc_url or self.rpc_url or os.getenv("EVM_PROVIDER_URL") or os.getenv("RPC_URL")
-            private_key = private_key or self.private_key or os.getenv("EVM_PRIVATE_KEY")
+            signer_type = signer_type or self.signer_type
+            private_key = private_key or self.private_key
+            turnkey_sign_with = turnkey_sign_with or self.turnkey_sign_with
+            turnkey_address = turnkey_address or self.turnkey_address
             from_token = from_token or self.from_token
             to_token = to_token or self.to_token
             amount = amount or self.amount
@@ -72,8 +85,6 @@ class EvmSwapTool(BaseTool):
 
             if not rpc_url:
                 return ToolResult(error="Missing rpc_url and no EVM_PROVIDER_URL/RPC_URL set")
-            if not private_key or not private_key.startswith("0x"):
-                return ToolResult(error="Missing or invalid private_key; must be 0x-prefixed")
             if not from_token or not to_token:
                 return ToolResult(error="Missing from_token or to_token")
             if not amount:
@@ -88,7 +99,18 @@ class EvmSwapTool(BaseTool):
             if not w3.is_connected():
                 return ToolResult(error=f"Failed to connect to RPC: {rpc_url}")
 
-            account = w3.eth.account.from_key(private_key)
+            # Create signer
+            try:
+                signer = SignerManager.create_signer(
+                    signer_type=signer_type,
+                    private_key=private_key,
+                    turnkey_sign_with=turnkey_sign_with,
+                    turnkey_address=turnkey_address
+                )
+            except Exception as e:
+                return ToolResult(error=f"Failed to create signer: {str(e)}")
+
+            signer_address = await signer.get_address()
             chain_id = w3.eth.chain_id
 
             # Determine decimals for from_token
@@ -121,7 +143,7 @@ class EvmSwapTool(BaseTool):
                 "sell_tokens": Web3.to_checksum_address(from_token) if not is_native else from_token,
                 "buy_tokens": Web3.to_checksum_address(to_token),
                 "sell_amounts": str(sell_amount),
-                "taker_address": account.address,
+                "taker_address": signer_address,
                 "approval_type": "Standard",
                 "skip_validation": "true",
                 "gasless": "false",
@@ -175,12 +197,12 @@ class EvmSwapTool(BaseTool):
                     "type": "function",
                 }]
                 token_contract = w3.eth.contract(address=Web3.to_checksum_address(from_token), abi=allowance_abi)
-                current_allowance = token_contract.functions.allowance(account.address, Web3.to_checksum_address(approval_target)).call()
+                current_allowance = token_contract.functions.allowance(signer_address, Web3.to_checksum_address(approval_target)).call()
                 if current_allowance < sell_amount:
                     approve_tx = token_contract.functions.approve(Web3.to_checksum_address(approval_target), sell_amount)
                     tx_dict = approve_tx.build_transaction({
-                        "from": account.address,
-                        "nonce": w3.eth.get_transaction_count(account.address),
+                        "from": signer_address,
+                        "nonce": w3.eth.get_transaction_count(signer_address),
                         "gas": 120000,
                         "chainId": chain_id,
                     })
@@ -191,8 +213,8 @@ class EvmSwapTool(BaseTool):
                             tx_dict["gasPrice"] = w3.eth.gas_price
                         except Exception:
                             pass
-                    signed = w3.eth.account.sign_transaction(tx_dict, private_key)
-                    tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
+                    signed_hex = await signer.sign_transaction(tx_dict, rpc_url)
+                    tx_hash = w3.eth.send_raw_transaction(bytes.fromhex(signed_hex[2:]) if signed_hex.startswith("0x") else bytes.fromhex(signed_hex))
 
                     def wait_receipt():
                         return w3.eth.wait_for_transaction_receipt(tx_hash, timeout=120)
@@ -205,10 +227,10 @@ class EvmSwapTool(BaseTool):
             # Execute swap transaction
             send_tx = {
                 "to": Web3.to_checksum_address(tx["to"]),
-                "from": account.address,
+                "from": signer_address,
                 "data": tx.get("data", "0x"),
                 "value": int(tx.get("value") or 0),
-                "nonce": w3.eth.get_transaction_count(account.address),
+                "nonce": w3.eth.get_transaction_count(signer_address),
                 "chainId": chain_id,
             }
             # Estimate gas or set from suggested
@@ -228,8 +250,8 @@ class EvmSwapTool(BaseTool):
                 except Exception:
                     pass
 
-            signed_swap = w3.eth.account.sign_transaction(send_tx, private_key)
-            swap_hash = w3.eth.send_raw_transaction(signed_swap.raw_transaction)
+            signed_hex = await signer.sign_transaction(send_tx, rpc_url)
+            swap_hash = w3.eth.send_raw_transaction(bytes.fromhex(signed_hex[2:]) if signed_hex.startswith("0x") else bytes.fromhex(signed_hex))
 
             def wait_swap_receipt():
                 return w3.eth.wait_for_transaction_receipt(swap_hash, timeout=180)
@@ -242,10 +264,11 @@ class EvmSwapTool(BaseTool):
             return ToolResult(
                 output={
                     "hash": swap_hash.hex(),
-                    "from": account.address,
+                    "from": signer_address,
                     "to": send_tx["to"],
                     "value": str(send_tx["value"]),
                     "chainId": chain_id,
+                    "signer_type": signer.signer_type,
                 }
             )
         except Exception as e:
