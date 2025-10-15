@@ -29,6 +29,8 @@ from .constants import (
     TOKEN_2022_PROGRAM_ID,
     TOKEN_ADDRESSES,
     TOKEN_PROGRAM_ID,
+    TOKEN_ACCOUNT_DATA_LENGTH,
+    TOKEN_MINT_DATA_LENGTH,
     UPDATE_INTERVAL,
 )
 from .keypairUtils import get_wallet_keypair
@@ -1234,8 +1236,40 @@ class SolanaService:
         return validate_solana_address(address)
 
     async def getAddressType(self, address: str) -> str:
-        rpc_url = self.rpc_url
-        return await get_address_type(rpc_url, address)
+        if not validate_solana_address(address):
+            return "Invalid address"
+
+        if not Pubkey:
+            return "Invalid address"
+
+        try:
+            pubkey = Pubkey.from_string(address)
+        except Exception:
+            return "Invalid address"
+
+        try:
+            client = await self._ensure_connection()
+            response = await client.get_account_info(pubkey)
+        except Exception as exc:
+            logger.error("Error fetching account info for %s: %s", address, exc)
+            return "Unknown (Data length: -1)"
+
+        account_info = self._extract_value(response)
+        if not account_info:
+            return "Account does not exist"
+
+        data = getattr(account_info, "data", None)
+        data_length = self._decode_account_data_length(data)
+
+        if data_length == 0:
+            return "Wallet"
+        if data_length == TOKEN_ACCOUNT_DATA_LENGTH:
+            return "Token Account"
+        if data_length == TOKEN_MINT_DATA_LENGTH:
+            return "Token"
+        if data_length is not None and data_length >= 0:
+            return f"Unknown (Data length: {data_length})"
+        return "Unknown"
 
     def detectPubkeysFromString(self, input_text: str, checkCurve: bool = False) -> List[str]:
         return detect_pubkeys_from_string(input_text, check_curve=checkCurve)
@@ -1720,11 +1754,13 @@ class SolanaService:
 
             try:
                 result = await swap_tool.execute(
+                    rpc_url=self.rpc_url,
                     private_key=private_key,
                     input_token=input_token,
                     output_token=output_token,
                     amount=amount,
                     slippage_bps=slippage_bps,
+                    runtime=self.runtime,
                 )
             except Exception as exc:  # pragma: no cover - external dependency
                 responses[wallet_label] = {"success": False, "error": str(exc)}
@@ -1822,6 +1858,39 @@ class SolanaService:
                     if slippage_val is not None:
                         summary["slippage_bps"] = max(1, int(slippage_val))
         return summary
+
+    @staticmethod
+    def _decode_account_data_length(data: Any) -> int:
+        if data is None:
+            return -1
+
+        if isinstance(data, (bytes, bytearray)):
+            return len(data)
+
+        if isinstance(data, str):
+            try:
+                return len(base64.b64decode(data))
+            except Exception:
+                return -1
+
+        if isinstance(data, (list, tuple)) and data:
+            first = data[0]
+            if isinstance(first, (bytes, bytearray)):
+                return len(first)
+            if isinstance(first, str):
+                try:
+                    return len(base64.b64decode(first))
+                except Exception:
+                    return -1
+
+        length_attr = getattr(data, "length", None)
+        if isinstance(length_attr, int):
+            return length_attr
+
+        try:
+            return len(data)  # type: ignore[arg-type]
+        except Exception:
+            return -1
 
     @staticmethod
     def _compute_implied_slippage(quote: Any) -> Optional[float]:
