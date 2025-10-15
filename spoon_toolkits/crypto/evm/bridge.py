@@ -7,6 +7,7 @@ import requests
 from pydantic import Field
 
 from spoon_ai.tools.base import BaseTool, ToolResult
+from .signers import SignerManager
 
 logger = logging.getLogger(__name__)
 
@@ -20,13 +21,16 @@ class EvmBridgeTool(BaseTool):
 
     name: str = "evm_bridge"
     description: str = (
-        "Bridge tokens across EVM chains using LiFi. Requires RPC URL, private key, and token addresses."
+        "Bridge tokens across EVM chains using LiFi. Supports local and Turnkey secure signing."
     )
     parameters: dict = {
         "type": "object",
         "properties": {
             "rpc_url": {"type": "string", "description": "RPC endpoint. Defaults to EVM_PROVIDER_URL/RPC_URL env."},
-            "private_key": {"type": "string", "description": "Sender private key (0x-prefixed). Defaults to EVM_PRIVATE_KEY env."},
+            "signer_type": {"type": "string", "enum": ["local", "turnkey", "auto"], "description": "Signing method: 'local', 'turnkey', or 'auto'", "default": "auto"},
+            "private_key": {"type": "string", "description": "Sender private key (0x-prefixed). Required for local signing. Defaults to EVM_PRIVATE_KEY env."},
+            "turnkey_sign_with": {"type": "string", "description": "Turnkey signing identity (address/ID). Required for Turnkey signing. Defaults to TURNKEY_SIGN_WITH env."},
+            "turnkey_address": {"type": "string", "description": "Turnkey signer address. Optional for Turnkey signing. Defaults to TURNKEY_ADDRESS env."},
             "from_chain_id": {"type": "integer", "description": "Source chain ID"},
             "to_chain_id": {"type": "integer", "description": "Destination chain ID"},
             "from_token": {"type": "string", "description": "Source token address (0x...) or zero for native"},
@@ -40,7 +44,10 @@ class EvmBridgeTool(BaseTool):
     }
 
     rpc_url: Optional[str] = Field(default=None)
+    signer_type: str = Field(default="auto")
     private_key: Optional[str] = Field(default=None)
+    turnkey_sign_with: Optional[str] = Field(default=None)
+    turnkey_address: Optional[str] = Field(default=None)
     from_chain_id: Optional[int] = Field(default=None)
     to_chain_id: Optional[int] = Field(default=None)
     from_token: Optional[str] = Field(default=None)
@@ -55,7 +62,10 @@ class EvmBridgeTool(BaseTool):
     async def execute(
         self,
         rpc_url: Optional[str] = None,
+        signer_type: Optional[str] = None,
         private_key: Optional[str] = None,
+        turnkey_sign_with: Optional[str] = None,
+        turnkey_address: Optional[str] = None,
         from_chain_id: Optional[int] = None,
         to_chain_id: Optional[int] = None,
         from_token: Optional[str] = None,
@@ -67,7 +77,10 @@ class EvmBridgeTool(BaseTool):
     ) -> ToolResult:
         try:
             rpc_url = rpc_url or self.rpc_url or os.getenv("EVM_PROVIDER_URL") or os.getenv("RPC_URL")
-            private_key = private_key or self.private_key or os.getenv("EVM_PRIVATE_KEY")
+            signer_type = signer_type or self.signer_type
+            private_key = private_key or self.private_key
+            turnkey_sign_with = turnkey_sign_with or self.turnkey_sign_with
+            turnkey_address = turnkey_address or self.turnkey_address
             from_chain_id = from_chain_id or self.from_chain_id
             to_chain_id = to_chain_id or self.to_chain_id
             from_token = from_token or self.from_token
@@ -79,8 +92,6 @@ class EvmBridgeTool(BaseTool):
 
             if not rpc_url:
                 return ToolResult(error="Missing rpc_url and no EVM_PROVIDER_URL/RPC_URL set")
-            if not private_key or not private_key.startswith("0x"):
-                return ToolResult(error="Missing or invalid private_key; must be 0x-prefixed")
             if not all([from_chain_id, to_chain_id, from_token, to_token, amount]):
                 return ToolResult(error="Missing required parameters for bridge")
 
@@ -93,7 +104,18 @@ class EvmBridgeTool(BaseTool):
             if not w3.is_connected():
                 return ToolResult(error=f"Failed to connect to RPC: {rpc_url}")
 
-            account = w3.eth.account.from_key(private_key)
+            # Create signer
+            try:
+                signer = SignerManager.create_signer(
+                    signer_type=signer_type,
+                    private_key=private_key,
+                    turnkey_sign_with=turnkey_sign_with,
+                    turnkey_address=turnkey_address
+                )
+            except Exception as e:
+                return ToolResult(error=f"Failed to create signer: {str(e)}")
+
+            signer_address = await signer.get_address()
 
             # Determine decimals for from_token
             decimals = 18
@@ -117,7 +139,7 @@ class EvmBridgeTool(BaseTool):
             from_amount = int(float(amount) * (10 ** decimals))
 
             # Resolve recipient address
-            to_address = to_address or account.address
+            to_address = to_address or signer_address
 
             # Get LiFi routes
             params = {
@@ -126,7 +148,7 @@ class EvmBridgeTool(BaseTool):
                 "fromTokenAddress": from_token,
                 "toTokenAddress": to_token,
                 "fromAmount": str(from_amount),
-                "fromAddress": account.address,
+                "fromAddress": signer_address,
                 "toAddress": to_address,
                 "options": {"slippage": slippage, "order": "RECOMMENDED"},
             }
@@ -189,12 +211,12 @@ class EvmBridgeTool(BaseTool):
                 }]
                 token_contract = w3.eth.contract(address=Web3.to_checksum_address(from_token), abi=allowance_abi)
                 spender = step_tx.get("to")
-                allowance = token_contract.functions.allowance(account.address, Web3.to_checksum_address(spender)).call()
+                allowance = token_contract.functions.allowance(signer_address, Web3.to_checksum_address(spender)).call()
                 if allowance < from_amount:
                     approve_tx = token_contract.functions.approve(Web3.to_checksum_address(spender), from_amount)
                     tx_dict = approve_tx.build_transaction({
-                        "from": account.address,
-                        "nonce": w3.eth.get_transaction_count(account.address),
+                        "from": signer_address,
+                        "nonce": w3.eth.get_transaction_count(signer_address),
                         "gas": 120000,
                         "chainId": w3.eth.chain_id,
                     })
@@ -205,8 +227,8 @@ class EvmBridgeTool(BaseTool):
                             tx_dict["gasPrice"] = w3.eth.gas_price
                         except Exception:
                             pass
-                    signed = w3.eth.account.sign_transaction(tx_dict, private_key)
-                    tx_hash = w3.eth.send_raw_transaction(signed.raw_transaction)
+                    signed_hex = await signer.sign_transaction(tx_dict, rpc_url)
+                    tx_hash = w3.eth.send_raw_transaction(bytes.fromhex(signed_hex[2:]) if signed_hex.startswith("0x") else bytes.fromhex(signed_hex))
 
                     def wait_receipt():
                         return w3.eth.wait_for_transaction_receipt(tx_hash, timeout=180)
@@ -222,10 +244,10 @@ class EvmBridgeTool(BaseTool):
 
             send_tx = {
                 "to": Web3.to_checksum_address(step_tx.get("to")),
-                "from": account.address,
+                "from": signer_address,
                 "value": safe_int_convert(step_tx.get("value")),
                 "data": step_tx.get("data", "0x"),
-                "nonce": w3.eth.get_transaction_count(account.address),
+                "nonce": w3.eth.get_transaction_count(signer_address),
                 "chainId": w3.eth.chain_id,
             }
             try:
@@ -247,8 +269,8 @@ class EvmBridgeTool(BaseTool):
                 except Exception:
                     pass
 
-            signed_bridge = w3.eth.account.sign_transaction(send_tx, private_key)
-            bridge_hash = w3.eth.send_raw_transaction(signed_bridge.raw_transaction)
+            signed_hex = await signer.sign_transaction(send_tx, rpc_url)
+            bridge_hash = w3.eth.send_raw_transaction(bytes.fromhex(signed_hex[2:]) if signed_hex.startswith("0x") else bytes.fromhex(signed_hex))
 
             def wait_bridge_receipt():
                 return w3.eth.wait_for_transaction_receipt(bridge_hash, timeout=180)
@@ -261,11 +283,12 @@ class EvmBridgeTool(BaseTool):
             return ToolResult(
                 output={
                     "hash": bridge_hash.hex(),
-                    "from": account.address,
+                    "from": signer_address,
                     "to": send_tx["to"],
                     "value": str(send_tx["value"]),
                     "fromChainId": from_chain_id,
                     "toChainId": to_chain_id,
+                    "signer_type": signer.signer_type,
                 }
             )
         except Exception as e:
