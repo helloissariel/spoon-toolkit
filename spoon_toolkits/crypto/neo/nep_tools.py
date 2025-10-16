@@ -5,7 +5,7 @@ from .base import get_provider
 
 class GetNep11BalanceTool(BaseTool):
     name: str = "get_nep11_balance"
-    description: str = "Get NEP-11 token (NFT) balance for a specific address and asset on Neo blockchain. Useful when you need to check NFT holdings or verify NFT balance for a specific address and asset. Returns a list of token IDs owned by the address."
+    description: str = "Gets the Nep11 balance by contract script hash user's address and tokenId of the Nep11 standard."
     parameters: dict = {
         "type": "object",
         "properties": {
@@ -13,9 +13,9 @@ class GetNep11BalanceTool(BaseTool):
                 "type": "string",
                 "description": "Neo address, supports standard format and script hash format (e.g., NiEtVMWVYgpXrWkRTMwRaMJtJ41gD3912N, 0xaad8073e6df9caaf6abc0749250eb0b800c0e6f4)"
             },
-            "asset_hash": {
+            "contract_hash": {
                 "type": "string",
-                "description": "Asset hash, must be valid hexadecimal format (e.g., 0x1234567890abcdef)"
+                "description": "contract hash, must be valid hexadecimal format (e.g., 0x1234567890abcdef)"
             },
             "token_id": {
                 "type": "string",
@@ -28,17 +28,17 @@ class GetNep11BalanceTool(BaseTool):
                 "default": "testnet"
             }
         },
-        "required": ["address", "asset_hash", "token_id"]
+        "required": ["address", "contract_hash", "token_id"]
     }
 
-    async def execute(self, address: str, asset_hash: str, token_id: str, network: str = "testnet") -> ToolResult:
+    async def execute(self, address: str, contract_hash: str, token_id: str, network: str = "testnet") -> ToolResult:
         try:
             async with get_provider(network) as provider:
                 validated_address = await provider._validate_address(address)
                 response = provider._make_request("GetNep11BalanceByContractHashAddressTokenId", {
-                "ContractHash": asset_hash,
+                "ContractHash": contract_hash,
                 "Address": validated_address,
-                "tokenId": token_id
+                "TokenId": token_id
             })
                 result = provider._handle_response(response)
                 return ToolResult(output=f"NEP-11 balance: {result}")

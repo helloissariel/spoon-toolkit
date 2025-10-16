@@ -38,7 +38,6 @@ from .contract_tools import (
     GetContractListByNameTool,
     GetVerifiedContractByContractHashTool,
     GetVerifiedContractTool,
-    GetSourceCodeByContractHashTool,
 )
 
 # Transaction tools
@@ -69,7 +68,6 @@ from .voting_tools import (
 # NEP tools
 from .nep_tools import (
     GetNep11BalanceTool,
-    GetNep11OwnedByAddressTool,
     GetNep11ByAddressAndHashTool,
     GetNep11TransferByAddressTool,
     GetNep11TransferByBlockHeightTool,
@@ -84,9 +82,9 @@ from .nep_tools import (
 
 # Smart Contract Call tools
 from .sc_call_tools import (
-    InvokeContractTool,
-    TestInvokeContractTool,
-    GetContractStateTool,
+    GetScCallByContractHashTool,
+    GetScCallByContractHashAddressTool,
+    GetScCallByTransactionHashTool,
 )
 
 # Application Log and State tools
@@ -95,24 +93,9 @@ from .log_state_tools import (
     GetApplicationStateTool,
 )
 
-# Statistics and Monitoring tools
-from .statistics_tools import (
-    GetNetworkStatisticsTool,
-    GetTransactionStatisticsTool,
-    GetAddressStatisticsTool,
-    GetContractStatisticsTool,
-)
-
 # Governance tools
 from .governance_tools import (
     GetCommitteeInfoTool,
-)
-
-# Utility tools
-from .utility_tools import (
-    ValidateAddressTool,
-    ConvertAddressTool,
-    GetNetworkInfoTool,
 )
 
 # Provider
@@ -145,13 +128,12 @@ __all__ = [
     "GetRecentBlocksInfoTool",
     "GetBlockRewardByHashTool",
     
-    # Contract tools (6)
+    # Contract tools (5)
     "GetContractCountTool",
     "GetContractByHashTool",
     "GetContractListByNameTool",
     "GetVerifiedContractByContractHashTool",
     "GetVerifiedContractTool",
-    "GetSourceCodeByContractHashTool",
     
     # Transaction tools (8)
     "GetTransactionCountTool",
@@ -174,9 +156,8 @@ __all__ = [
     "GetVotesByCandidateAddressTool",
     "GetTotalVotesTool",
     
-    # NEP tools (12)
+    # NEP tools (11)
     "GetNep11BalanceTool",
-    "GetNep11OwnedByAddressTool",
     "GetNep11ByAddressAndHashTool",
     "GetNep11TransferByAddressTool",
     "GetNep11TransferByBlockHeightTool",
@@ -189,27 +170,16 @@ __all__ = [
     "GetNep17TransferCountByAddressTool",
     
     # Smart Contract Call tools (3)
-    "InvokeContractTool",
-    "TestInvokeContractTool",
-    "GetContractStateTool",
+    "GetScCallByContractHashTool",
+    "GetScCallByContractHashAddressTool",
+    "GetScCallByTransactionHashTool",
     
     # Application Log and State tools (2)
     "GetApplicationLogTool",
     "GetApplicationStateTool",
-    
-    # Statistics and Monitoring tools (4)
-    "GetNetworkStatisticsTool",
-    "GetTransactionStatisticsTool",
-    "GetAddressStatisticsTool",
-    "GetContractStatisticsTool",
-    
+
     # Governance tools (1)
     "GetCommitteeInfoTool",
-    
-    # Utility tools (3)
-    "ValidateAddressTool",
-    "ConvertAddressTool",
-    "GetNetworkInfoTool",
     
     # Provider
     "NeoProvider",

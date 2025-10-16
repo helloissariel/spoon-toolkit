@@ -128,13 +128,21 @@ class NeoProvider:
         session = await self._ensure_session()
 
         rpc_method = method
+        # Handle both dict and list params
+        # Neo extended APIs use dict params, standard JSON-RPC uses list params
+        if params is None:
+            params_value = []
+        elif isinstance(params, dict):
+            params_value = params  # Keep dict as-is for extended APIs
+        else:
+            params_value = params  # Keep list as-is for standard APIs
+            
         payload = {
             "jsonrpc": "2.0",
             "method": rpc_method,
-            "params": [] if params is None else params,
+            "params": params_value,
             "id": 1,
         }
-
         try:
             async with session.post(self.rpc_url, json=payload) as response:
                 response.raise_for_status()

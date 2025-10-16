@@ -30,13 +30,13 @@ class GetCandidateCountTool(BaseTool):
 
 class GetCandidateByAddressTool(BaseTool):
     name: str = "get_candidate_by_address"
-    description: str = "Get detailed candidate information by address on Neo blockchain. Useful when you need to verify candidate status or analyze specific candidate information. Returns candidate information."
+    description: str = "Get detailed candidate information by public key on Neo blockchain. Useful when you need to verify candidate status or analyze specific candidate information. Returns candidate information."
     parameters: dict = {
         "type": "object",
         "properties": {
             "address": {
                 "type": "string",
-                "description": "Neo address, supports standard format and script hash format (e.g., NiEtVMWVYgpXrWkRTMwRaMJtJ41gD3912N, 0xaad8073e6df9caaf6abc0749250eb0b800c0e6f4)"
+                "description": "Candidate public key in hex format (e.g., 0214baf0ceea3a66f17e7e1e839ea25fd8bed6cd82e6bb6e68250189065f44ff01)"
             },
             "network": {
                 "type": "string",
@@ -51,8 +51,8 @@ class GetCandidateByAddressTool(BaseTool):
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                validated_address = await provider._validate_address(address)
-                response = await provider._make_request("GetCandidateByAddress", {"Address": validated_address})
+                # For candidate queries, address is actually the public key
+                response = await provider._make_request("GetCandidateByAddress", {"Address": address})
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Candidate info: {result}")
         except Exception as e:
