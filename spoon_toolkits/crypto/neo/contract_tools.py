@@ -73,15 +73,32 @@ class GetContractListByNameTool(BaseTool):
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
+            },
+            "Skip": {
+                "type": "integer",
+                "description": "the number of items to skip"
+            },
+            "Limit": {
+                "type": "integer",
+                "description": "the number of items to return"
             }
         },
         "required": ["contract_name"]
     }
 
-    async def execute(self, contract_name: str, network: str = "testnet") -> ToolResult:
+    async def execute(self, contract_name: str, network: str = "testnet", Skip: int = None, Limit: int = None) -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                response = await provider._make_request("GetContractListByName", {"Name": contract_name})
+                # Build request parameters
+                request_params = {"Name": contract_name}
+
+                # Add optional parameters if provided
+                if Skip is not None:
+                    request_params["Skip"] = Skip
+                if Limit is not None:
+                    request_params["Limit"] = Limit
+
+                response = await provider._make_request("GetContractListByName", request_params)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Contract list: {result}")
         except Exception as e:
@@ -102,15 +119,26 @@ class GetVerifiedContractByContractHashTool(BaseTool):
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
-            }
+            },
+            "UpdateCounter": {
+                "type": "integer",
+                "description": "update counts of a certain contract"
+            },
         },
         "required": ["contract_hash"]
     }
 
-    async def execute(self, contract_hash: str, network: str = "testnet") -> ToolResult:
+    async def execute(self, contract_hash: str, network: str = "testnet", UpdateCounter: int = None) -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                response = await provider._make_request("GetVerifiedContractByContractHash", {"ContractHash": contract_hash})
+                # Build request parameters
+                request_params = {"ContractHash": contract_hash}
+
+                # Add optional parameters if provided
+                if UpdateCounter is not None:
+                    request_params["UpdateCounter"] = UpdateCounter
+
+                response = await provider._make_request("GetVerifiedContractByContractHash", request_params)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Verified contract info: {result}")
         except Exception as e:
@@ -128,22 +156,31 @@ class GetVerifiedContractTool(BaseTool):
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
             },
-            "skip": {
+            "Skip": {
                 "type": "integer",
                 "description": "the number of results to skip",
             },
-            "limit": {
+            "Limit": {
                 "type": "integer",
                 "description": "the number of results to return",
             }
         },
-        "required": ["skip","limit"]
+        "required": []
     }
 
-    async def execute(self, skip,limit, network: str = "testnet") -> ToolResult:
+    async def execute(self, network: str = "testnet", Skip: int = None, Limit: int = None) -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                response = await provider._make_request("GetVerifiedContracts", {"Skip": skip,"Limit":limit})
+                # Build request parameters
+                request_params = {}
+
+                # Add optional parameters if provided
+                if Skip is not None:
+                    request_params["Skip"] = Skip
+                if Limit is not None:
+                    request_params["Limit"] = Limit
+
+                response = await provider._make_request("GetVerifiedContracts", request_params)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Verified contracts: {result}")
         except Exception as e:

@@ -72,15 +72,32 @@ class GetAssetInfoByNameTool(BaseTool):
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
+            },
+            "Limit": {
+                "type": "integer",
+                "description": "the number of items to return"
+            },
+            "Skip": {
+                "type": "integer",
+                "description": "the number of items to skip"
             }
         },
         "required": ["asset_name"]
     }
 
-    async def execute(self, asset_name: str, network: str = "testnet") -> ToolResult:
+    async def execute(self, asset_name: str, network: str = "testnet", Limit: int = None, Skip: int = None) -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                response = await provider._make_request("GetAssetInfosByName", {"Name": asset_name})
+                # Build request parameters
+                request_params = {"Name": asset_name}
+
+                # Add optional parameters if provided
+                if Limit is not None:
+                    request_params["Limit"] = Limit
+                if Skip is not None:
+                    request_params["Skip"] = Skip
+
+                response = await provider._make_request("GetAssetInfosByName", request_params)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Asset info: {result}")
         except Exception as e:
@@ -101,16 +118,32 @@ class GetAssetsInfoByUserAddressTool(BaseTool):
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
+            },
+            "Limit": {
+                "type": "integer",
+                "description": "the number of items to return"
+            },
+            "Skip": {
+                "type": "integer",
+                "description": "the number of items to skip"
             }
         },
         "required": ["address"]
     }
 
-    async def execute(self, address: str, network: str = "testnet") -> ToolResult:
+    async def execute(self, address: str, network: str = "testnet", Limit: int = None, Skip: int = None) -> ToolResult:
         try:
             async with get_provider(network) as provider:
                 validated_address = await provider._validate_address(address)
-                response = await provider._make_request("GetAssetInfos", {"Address": validated_address})
+
+                request_params = {"Address": validated_address}
+
+                if Limit is not None:
+                    request_params["Limit"] = Limit
+                if Skip is not None:
+                    request_params["Skip"] = Skip
+
+                response = await provider._make_request("GetAssetInfos", request_params)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Assets info: {result}")
         except Exception as e:

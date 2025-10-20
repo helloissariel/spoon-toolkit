@@ -73,16 +73,32 @@ class GetCandidateByVoterAddressTool(BaseTool):
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
+            },
+            "Skip": {
+                "type": "integer",
+                "description": "the number of items to skip"
+            },
+            "Limit": {
+                "type": "integer",
+                "description": "the number of items to return"
             }
         },
         "required": ["voter_address"]
     }
 
-    async def execute(self, voter_address: str, network: str = "testnet") -> ToolResult:
+    async def execute(self, voter_address: str, network: str = "testnet", Skip: int = None, Limit: int = None) -> ToolResult:
         try:
             async with get_provider(network) as provider:
                 validated_address = await provider._validate_address(voter_address)
-                response = await provider._make_request("GetCandidateByVoterAddress", {"VoterAddress": validated_address})
+                request_params = {"VoterAddress": validated_address}
+
+                # Add optional parameters if provided
+                if Skip is not None:
+                    request_params["Skip"] = Skip
+                if Limit is not None:
+                    request_params["Limit"] = Limit
+
+                response = await provider._make_request("GetCandidateByVoterAddress", request_params)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Candidate info: {result}")
         except Exception as e:
@@ -103,16 +119,32 @@ class GetScVoteCallByCandidateAddressTool(BaseTool):
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
+            },
+            "Skip": {
+                "type": "integer",
+                "description": "the number of items to skip"
+            },
+            "Limit": {
+                "type": "integer",
+                "description": "the number of items to return"
             }
         },
         "required": ["candidate_address"]
     }
 
-    async def execute(self, candidate_address: str, network: str = "testnet") -> ToolResult:
+    async def execute(self, candidate_address: str, network: str = "testnet", Skip: int = None, Limit: int = None) -> ToolResult:
         try:
             async with get_provider(network) as provider:
                 validated_address = await provider._validate_address(candidate_address)
-                response = await provider._make_request("GetScVoteCallByCandidateAddress", {"CandidateAddress": validated_address})
+                request_params = {"CandidateAddress": validated_address}
+
+                # Add optional parameters if provided
+                if Skip is not None:
+                    request_params["Skip"] = Skip
+                if Limit is not None:
+                    request_params["Limit"] = Limit
+
+                response = await provider._make_request("GetScVoteCallByCandidateAddress", request_params)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Vote calls: {result}")
         except Exception as e:
@@ -162,16 +194,32 @@ class GetScVoteCallByVoterAddressTool(BaseTool):
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
+            },
+            "Skip": {
+                "type": "integer",
+                "description": "the number of items to skip"
+            },
+            "Limit": {
+                "type": "integer",
+                "description": "the number of items to return"
             }
         },
         "required": ["voter_address"]
     }
 
-    async def execute(self, voter_address: str, network: str = "testnet") -> ToolResult:
+    async def execute(self, voter_address: str, network: str = "testnet", Skip: int = None, Limit: int = None) -> ToolResult:
         try:
             async with get_provider(network) as provider:
                 validated_address = await provider._validate_address(voter_address)
-                response = await provider._make_request("GetScVoteCallByVoterAddress", {"VoterAddress": validated_address})
+                request_params = {"VoterAddress": validated_address}
+
+                # Add optional parameters if provided
+                if Skip is not None:
+                    request_params["Skip"] = Skip
+                if Limit is not None:
+                    request_params["Limit"] = Limit
+
+                response = await provider._make_request("GetScVoteCallByVoterAddress", request_params)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Vote calls: {result}")
         except Exception as e:
@@ -192,16 +240,32 @@ class GetVotersByCandidateAddressTool(BaseTool):
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
+            },
+            "Skip": {
+                "type": "integer",
+                "description": "the number of items to skip"
+            },
+            "Limit": {
+                "type": "integer",
+                "description": "the number of items to return"
             }
         },
         "required": ["candidate_address"]
     }
 
-    async def execute(self, candidate_address: str, network: str = "testnet") -> ToolResult:
+    async def execute(self, candidate_address: str, network: str = "testnet", Skip: int = None, Limit: int = None) -> ToolResult:
         try:
             async with get_provider(network) as provider:
                 validated_address = await provider._validate_address(candidate_address)
-                response = await provider._make_request("GetVotersByCandidateAddress", {"CandidateAddress": validated_address})
+                request_params = {"CandidateAddress": validated_address}
+
+                # Add optional parameters if provided
+                if Skip is not None:
+                    request_params["Skip"] = Skip
+                if Limit is not None:
+                    request_params["Limit"] = Limit
+
+                response = await provider._make_request("GetVotersByCandidateAddress", request_params)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Voters: {result}")
         except Exception as e:

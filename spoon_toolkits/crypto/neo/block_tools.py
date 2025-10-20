@@ -120,15 +120,32 @@ class GetRecentBlocksInfoTool(BaseTool):
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
+            },
+            "Limit": {
+                "type": "integer",
+                "description": "the number of items to return"
+            },
+            "Skip": {
+                "type": "integer",
+                "description": "the number of items to skip"
             }
         },
         "required": []
     }
 
-    async def execute(self,network: str = "testnet") -> ToolResult:
+    async def execute(self, network: str = "testnet", Limit: int = None, Skip: int = None) -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                response = await provider._make_request("GetBlockInfoList", {})
+                # Build request parameters
+                request_params = {}
+
+                # Add optional parameters if provided
+                if Limit is not None:
+                    request_params["Limit"] = Limit
+                if Skip is not None:
+                    request_params["Skip"] = Skip
+
+                response = await provider._make_request("GetBlockInfoList", request_params)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Recent blocks info: {result}")
         except Exception as e:

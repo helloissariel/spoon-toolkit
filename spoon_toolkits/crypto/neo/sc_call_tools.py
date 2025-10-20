@@ -18,15 +18,31 @@ class GetScCallByContractHashTool(BaseTool):
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
+            },
+            "Skip": {
+                "type": "integer",
+                "description": "the number of items to skip"
+            },
+            "Limit": {
+                "type": "integer",
+                "description": "the number of items to return"
             }
         },
         "required": ["contract_hash"]
     }
 
-    async def execute(self, contract_hash: str, network: str = "testnet") -> ToolResult:
+    async def execute(self, contract_hash: str, network: str = "testnet", Skip: int = None, Limit: int = None) -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                response = await provider._make_request("GetScCallByContractHash", {"ContractHash":contract_hash})
+                request_params = {"ContractHash": contract_hash}
+
+                # Add optional parameters if provided
+                if Skip is not None:
+                    request_params["Skip"] = Skip
+                if Limit is not None:
+                    request_params["Limit"] = Limit
+
+                response = await provider._make_request("GetScCallByContractHash", request_params)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"GetScCallByContractHash: {result}")
         except Exception as e:
@@ -51,15 +67,31 @@ class GetScCallByContractHashAddressTool(BaseTool):
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
+            },
+            "Skip": {
+                "type": "integer",
+                "description": "the number of items to skip"
+            },
+            "Limit": {
+                "type": "integer",
+                "description": "the number of items to return"
             }
         },
         "required": ["contract_hash","address"]
     }
 
-    async def execute(self, contract_hash: str, address:str ,network: str = "testnet") -> ToolResult:
+    async def execute(self, contract_hash: str, address: str, network: str = "testnet", Skip: int = None, Limit: int = None) -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                response = await provider._make_request("GetScCallByContractHash", {"ContractHash": contract_hash,"Address":address})                
+                request_params = {"ContractHash": contract_hash, "Address": address}
+
+                # Add optional parameters if provided
+                if Skip is not None:
+                    request_params["Skip"] = Skip
+                if Limit is not None:
+                    request_params["Limit"] = Limit
+
+                response = await provider._make_request("GetScCallByContractHashAddress", request_params)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"GetScCallByContractHashAddress:{result}")
         except Exception as e:
@@ -80,15 +112,31 @@ class GetScCallByTransactionHashTool(BaseTool):
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
+            },
+            "Skip": {
+                "type": "integer",
+                "description": "the number of items to skip"
+            },
+            "Limit": {
+                "type": "integer",
+                "description": "the number of items to return"
             }
         },
         "required": ["transaction_hash"]
     }
 
-    async def execute(self, transaction_hash: str, network: str = "testnet") -> ToolResult:
+    async def execute(self, transaction_hash: str, network: str = "testnet", Skip: int = None, Limit: int = None) -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                response = await provider._make_request("GetScCallByTransactionHash", {"TransactionHash": transaction_hash})                
+                request_params = {"TransactionHash": transaction_hash}
+
+                # Add optional parameters if provided
+                if Skip is not None:
+                    request_params["Skip"] = Skip
+                if Limit is not None:
+                    request_params["Limit"] = Limit
+
+                response = await provider._make_request("GetScCallByTransactionHash", request_params)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"GetScCallByTransactionHash:{result}")
         except Exception as e:

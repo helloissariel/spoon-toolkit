@@ -51,17 +51,32 @@ class GetApplicationStateTool(BaseTool):
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
+            },
+            "Skip": {
+                "type": "integer",
+                "description": "the number of items to skip"
+            },
+            "Limit": {
+                "type": "integer",
+                "description": "the number of items to return"
             }
         },
         "required": ["block_hash"]
     }
 
-    async def execute(self, block_hash: str, network: str = "testnet") -> ToolResult:
+    async def execute(self, block_hash: str, network: str = "testnet", Skip: int = None, Limit: int = None) -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                response = await provider._make_request("GetApplicationLogByBlockHash", {
-                    "BlockHash": block_hash
-                })
+                # Build request parameters
+                request_params = {"BlockHash": block_hash}
+
+                # Add optional parameters if provided
+                if Skip is not None:
+                    request_params["Skip"] = Skip
+                if Limit is not None:
+                    request_params["Limit"] = Limit
+
+                response = await provider._make_request("GetApplicationLogByBlockHash", request_params)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Application state: {result}")
         except Exception as e:
