@@ -20,6 +20,9 @@ neo-mamba>=3.0.1
 # Github GraphQL dependencies
 gql>=3.5.0
 
+# Additional dependencies used in the codebase
+neo3>=1.0.0
+
 # Development dependencies
 pytest>=7.0.0
 pytest-cov>=4.0.0
