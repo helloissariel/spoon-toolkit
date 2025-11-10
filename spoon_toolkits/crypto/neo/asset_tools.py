@@ -21,10 +21,10 @@ class GetAssetCountTool(BaseTool):
 
     async def execute(self, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetAssetCount", {})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Asset count: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetAssetCount", {})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Asset count: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
@@ -50,10 +50,10 @@ class GetAssetInfoByHashTool(BaseTool):
 
     async def execute(self, asset_hash: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetAssetInfoByHash", {"AssetHash": asset_hash})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Asset info: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetAssetInfoByContractHash", {"ContractHash": asset_hash})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Asset info: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
@@ -72,17 +72,34 @@ class GetAssetInfoByNameTool(BaseTool):
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
+            },
+            "Limit": {
+                "type": "integer",
+                "description": "the number of items to return"
+            },
+            "Skip": {
+                "type": "integer",
+                "description": "the number of items to skip"
             }
         },
         "required": ["asset_name"]
     }
 
-    async def execute(self, asset_name: str, network: str = "testnet") -> ToolResult:
+    async def execute(self, asset_name: str, network: str = "testnet", Limit: int = None, Skip: int = None) -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetAssetInfoByName", {"AssetName": asset_name})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Asset info: {result}")
+            async with get_provider(network) as provider:
+                # Build request parameters
+                request_params = {"Name": asset_name}
+
+                # Add optional parameters if provided
+                if Limit is not None:
+                    request_params["Limit"] = Limit
+                if Skip is not None:
+                    request_params["Skip"] = Skip
+
+                response = await provider._make_request("GetAssetInfosByName", request_params)
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Asset info: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
@@ -101,18 +118,34 @@ class GetAssetsInfoByUserAddressTool(BaseTool):
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
+            },
+            "Limit": {
+                "type": "integer",
+                "description": "the number of items to return"
+            },
+            "Skip": {
+                "type": "integer",
+                "description": "the number of items to skip"
             }
         },
         "required": ["address"]
     }
 
-    async def execute(self, address: str, network: str = "testnet") -> ToolResult:
+    async def execute(self, address: str, network: str = "testnet", Limit: int = None, Skip: int = None) -> ToolResult:
         try:
-            provider = get_provider(network)
-            validated_address = provider._validate_address(address)
-            response = provider._make_request("GetAssetsInfoByUserAddress", {"Address": validated_address})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Assets info: {result}")
+            async with get_provider(network) as provider:
+                validated_address = await provider._validate_address(address)
+
+                request_params = {"Address": validated_address}
+
+                if Limit is not None:
+                    request_params["Limit"] = Limit
+                if Skip is not None:
+                    request_params["Skip"] = Skip
+
+                response = await provider._make_request("GetAssetInfos", request_params)
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Assets info: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
@@ -142,13 +175,13 @@ class GetAssetInfoByAssetAndAddressTool(BaseTool):
 
     async def execute(self, asset_hash: str, address: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            validated_address = provider._validate_address(address)
-            response = provider._make_request("GetAssetInfoByAssetAndAddress", {
-                "AssetHash": asset_hash,
-                "Address": validated_address
-            })
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Asset info: {result}")
+            async with get_provider(network) as provider:
+                validated_address = await provider._validate_address(address)
+                response = await provider._make_request("GetAssetsHeldByContractHashAddress",{
+                    "Address": validated_address,
+                    "ContractHash": asset_hash,
+                    })
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Asset info: {result}")
         except Exception as e:
             return ToolResult(error=str(e)) 

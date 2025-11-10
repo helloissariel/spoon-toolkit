@@ -49,7 +49,7 @@ from .crypto.neo import (
     GetTotalSentAndReceivedTool,
     GetRawTransactionByAddressTool,
     GetTransferByAddressTool,
-    GetNep11OwnedByAddressTool,
+    GetNep11ByAddressAndHashTool,
 
     # Asset tools (5)
     GetAssetCountTool,
@@ -66,13 +66,12 @@ from .crypto.neo import (
     GetRecentBlocksInfoTool,
     GetBlockRewardByHashTool,
 
-    # Contract tools (6)
+    # Contract tools (5)
     GetContractCountTool,
     GetContractByHashTool,
     GetContractListByNameTool,
     GetVerifiedContractByContractHashTool,
     GetVerifiedContractTool,
-    GetSourceCodeByContractHashTool,
 
     # Transaction tools (8)
     GetTransactionCountTool,
@@ -95,9 +94,8 @@ from .crypto.neo import (
     GetVotesByCandidateAddressTool,
     GetTotalVotesTool,
 
-    # NEP tools (12)
+    # NEP tools (11)
     GetNep11BalanceTool,
-    GetNep11OwnedByAddressTool,
     GetNep11ByAddressAndHashTool,
     GetNep11TransferByAddressTool,
     GetNep11TransferByBlockHeightTool,
@@ -110,27 +108,16 @@ from .crypto.neo import (
     GetNep17TransferCountByAddressTool,
 
     # Smart Contract Call tools (3)
-    InvokeContractTool,
-    TestInvokeContractTool,
-    GetContractStateTool,
+    GetScCallByContractHashTool,
+    GetScCallByContractHashAddressTool,
+    GetScCallByTransactionHashTool,
 
     # Application Log and State tools (2)
     GetApplicationLogTool,
     GetApplicationStateTool,
 
-    # Statistics and Monitoring tools (4)
-    GetNetworkStatisticsTool,
-    GetTransactionStatisticsTool,
-    GetAddressStatisticsTool,
-    GetContractStatisticsTool,
-
     # Governance tools (1)
     GetCommitteeInfoTool,
-
-    # Utility tools (3)
-    ValidateAddressTool,
-    ConvertAddressTool,
-    GetNetworkInfoTool,
 
     # Provider
     NeoProvider,

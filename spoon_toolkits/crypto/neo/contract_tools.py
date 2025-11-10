@@ -21,10 +21,11 @@ class GetContractCountTool(BaseTool):
 
     async def execute(self, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetContractCount", {})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Contract count: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetContractCount", {})
+                result =  provider._handle_response(response)
+                
+                return ToolResult(output=f"Contract count: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
@@ -50,10 +51,10 @@ class GetContractByHashTool(BaseTool):
 
     async def execute(self, contract_hash: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetContractByHash", {"ContractHash": contract_hash})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Contract info: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetContractByContractHash", {"ContractHash": contract_hash})
+                result =  provider._handle_response(response)
+                return ToolResult(output=f"Contract info: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
@@ -72,17 +73,34 @@ class GetContractListByNameTool(BaseTool):
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
+            },
+            "Skip": {
+                "type": "integer",
+                "description": "the number of items to skip"
+            },
+            "Limit": {
+                "type": "integer",
+                "description": "the number of items to return"
             }
         },
         "required": ["contract_name"]
     }
 
-    async def execute(self, contract_name: str, network: str = "testnet") -> ToolResult:
+    async def execute(self, contract_name: str, network: str = "testnet", Skip: int = None, Limit: int = None) -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetContractListByName", {"ContractName": contract_name})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Contract list: {result}")
+            async with get_provider(network) as provider:
+                # Build request parameters
+                request_params = {"Name": contract_name}
+
+                # Add optional parameters if provided
+                if Skip is not None:
+                    request_params["Skip"] = Skip
+                if Limit is not None:
+                    request_params["Limit"] = Limit
+
+                response = await provider._make_request("GetContractListByName", request_params)
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Contract list: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
@@ -101,17 +119,28 @@ class GetVerifiedContractByContractHashTool(BaseTool):
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
-            }
+            },
+            "UpdateCounter": {
+                "type": "integer",
+                "description": "update counts of a certain contract"
+            },
         },
         "required": ["contract_hash"]
     }
 
-    async def execute(self, contract_hash: str, network: str = "testnet") -> ToolResult:
+    async def execute(self, contract_hash: str, network: str = "testnet", UpdateCounter: int = None) -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetVerifiedContractByContractHash", {"ContractHash": contract_hash})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Verified contract info: {result}")
+            async with get_provider(network) as provider:
+                # Build request parameters
+                request_params = {"ContractHash": contract_hash}
+
+                # Add optional parameters if provided
+                if UpdateCounter is not None:
+                    request_params["UpdateCounter"] = UpdateCounter
+
+                response = await provider._make_request("GetVerifiedContractByContractHash", request_params)
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Verified contract info: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
@@ -126,45 +155,34 @@ class GetVerifiedContractTool(BaseTool):
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
+            },
+            "Skip": {
+                "type": "integer",
+                "description": "the number of results to skip",
+            },
+            "Limit": {
+                "type": "integer",
+                "description": "the number of results to return",
             }
         },
         "required": []
     }
 
-    async def execute(self, network: str = "testnet") -> ToolResult:
+    async def execute(self, network: str = "testnet", Skip: int = None, Limit: int = None) -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetVerifiedContract", {})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Verified contracts: {result}")
+            async with get_provider(network) as provider:
+                # Build request parameters
+                request_params = {}
+
+                # Add optional parameters if provided
+                if Skip is not None:
+                    request_params["Skip"] = Skip
+                if Limit is not None:
+                    request_params["Limit"] = Limit
+
+                response = await provider._make_request("GetVerifiedContracts", request_params)
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Verified contracts: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
-class GetSourceCodeByContractHashTool(BaseTool):
-    name: str = "get_source_code_by_contract_hash"
-    description: str = "Get smart contract source code by contract hash on Neo blockchain. Useful when you need to analyze contract logic or verify contract implementation. Returns source code information."
-    parameters: dict = {
-        "type": "object",
-        "properties": {
-            "contract_hash": {
-                "type": "string",
-                "description": "Contract hash, must be valid hexadecimal format (e.g., 0x1234567890abcdef)"
-            },
-            "network": {
-                "type": "string",
-                "description": "Neo network type, must be 'mainnet' or 'testnet'",
-                "enum": ["mainnet", "testnet"],
-                "default": "testnet"
-            }
-        },
-        "required": ["contract_hash"]
-    }
-
-    async def execute(self, contract_hash: str, network: str = "testnet") -> ToolResult:
-        try:
-            provider = get_provider(network)
-            response = provider._make_request("GetSourceCodeByContractHash", {"ContractHash": contract_hash})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Source code: {result}")
-        except Exception as e:
-            return ToolResult(error=str(e)) 

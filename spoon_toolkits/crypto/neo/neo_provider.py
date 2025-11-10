@@ -13,15 +13,19 @@ The provider handles:
 """
 
 import json
+import os
+import ssl
 from typing import Dict, Any, List, Optional
 from decimal import Decimal
+
+import aiohttp
 from neo3.api import NeoRpcClient
 from neo3.core import types
-from neo3 import settings
+from neo3.wallet import utils as walletutils
 
 # RPC URLs for different networks
-MAINNET_RPC = "https://mainnet1.neo.org:443"
-TESTNET_RPC = "https://testnet1.neo.org:443"
+DEFAULT_MAINNET_RPC = "https://mainmagnet.ngd.network:443"
+DEFAULT_TESTNET_RPC = "https://testmagnet.ngd.network:443"
 
 class NeoProvider:
     """Neo blockchain data provider using neo-mamba library
@@ -47,55 +51,113 @@ class NeoProvider:
             raise ValueError("Network must be 'mainnet' or 'testnet'")
 
         self.network = network
-        rpc_url = MAINNET_RPC if network == "mainnet" else TESTNET_RPC
+        self.rpc_url = (
+            os.getenv("NEO_MAINNET_RPC", DEFAULT_MAINNET_RPC)
+            if network == "mainnet"
+            else os.getenv("NEO_TESTNET_RPC", DEFAULT_TESTNET_RPC)
+        )
 
         # Initialize neo-mamba RPC client
-        self.rpc_client = NeoRpcClient(rpc_url)
+        self.rpc_client = NeoRpcClient(self.rpc_url)
+        self._session: Optional[aiohttp.ClientSession] = None
+        self._request_timeout = float(os.getenv("NEO_RPC_TIMEOUT", "15"))
 
-    def _validate_address(self, address: str) -> types.UInt160:
-        """Validate and convert address format
-
-        Converts Neo addresses to script hash format if they are in standard format.
-        If the address is already in script hash format, it returns as is.
+    def _normalize_address(self, raw: str) -> tuple[str, types.UInt160]:
+        """Normalize an address into Base58 address + script hash tuple.
 
         Args:
-            address (str): The address to validate and convert
+            raw: Address supplied by the caller, either Base58 or 0x-prefixed script hash.
 
         Returns:
-            types.UInt160: The address as UInt160 script hash
+            Tuple containing the Base58 encoded address and its script hash.
 
         Raises:
-            ValueError: If the address is not a valid Neo address
+            ValueError: If the provided value cannot be parsed for the current network.
         """
+        # Handle addresses passed in as 0x-prefixed script hashes.
+        if raw.startswith("0x"):
+            raw = raw[2:]
         try:
-            # Try to parse as script hash first
-            if address.startswith("0x"):
-                return types.UInt160.from_string(address[2:])
-            else:
-                return types.UInt160.from_string(address)
-        except:
-            # If that fails, try to convert from standard address format
-            try:
-                return self.rpc_client.validate_address(address)
-            except:
-                raise ValueError(f"Invalid Neo address: {address}")
+            script_hash = types.UInt160.from_string(raw)
+            normalized_address = walletutils.script_hash_to_address(script_hash)
+        except ValueError:
+            # Fall back to validating/parsing the provided Base58 address.
+            walletutils.validate_address(raw)
+            normalized_address = raw
+            script_hash = walletutils.address_to_script_hash(raw)
+        return normalized_address, script_hash
+
+    async def _validate_address(self, raw: str) -> str:
+        """Backward-compatible wrapper returning a normalized address string.
+
+        Some toolkit helpers still call `_validate_address`; we expose this shim
+        so they benefit from the new `_normalize_address` logic without refactors.
+        """
+        normalized_address, _ = self._normalize_address(raw)
+        return normalized_address
 
     def _handle_response(self, result: Any) -> Any:
-        """Handle neo-mamba response and extract result
-
-        Args:
-            result: The result from neo-mamba RPC call
-
-        Returns:
-            Any: The processed result data
-
-        Raises:
-            Exception: If the response contains an error
-        """
+        """Handle neo-mamba response and extract result."""
         if result is None:
-            raise Exception("Empty response from Neo RPC")
-
+            raise RuntimeError("Empty response from Neo RPC")
         return result
+
+    async def _ensure_session(self) -> aiohttp.ClientSession:
+        """Ensure an aiohttp client session exists for raw RPC calls."""
+        if self._session and not self._session.closed:
+            return self._session
+
+        ssl_context = ssl.create_default_context()
+        if os.getenv("NEO_RPC_ALLOW_INSECURE", "false").lower() in {"1", "true", "yes"}:
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+
+        timeout = aiohttp.ClientTimeout(total=self._request_timeout)
+        connector = aiohttp.TCPConnector(ssl=ssl_context)
+        self._session = aiohttp.ClientSession(timeout=timeout, connector=connector)
+        return self._session
+
+    async def _make_request(self, method: str, params) -> Any:
+        """Send a JSON-RPC request to the configured Neo endpoint.
+
+        Many higher-level toolkit functions call RPC extensions not yet exposed
+        by neo-mamba. This helper issues the request directly; if the remote node
+        does not recognise the method we return a descriptive string rather than
+        raising so the caller can surface the limitation gracefully.
+        """
+        session = await self._ensure_session()
+
+        rpc_method = method
+        # Handle both dict and list params
+        # Neo extended APIs use dict params, standard JSON-RPC uses list params
+        if params is None:
+            params_value = []
+        elif isinstance(params, dict):
+            params_value = params  # Keep dict as-is for extended APIs
+        else:
+            params_value = params  # Keep list as-is for standard APIs
+            
+        payload = {
+            "jsonrpc": "2.0",
+            "method": rpc_method,
+            "params": params_value,
+            "id": 1,
+        }
+        try:
+            async with session.post(self.rpc_url, json=payload) as response:
+                response.raise_for_status()
+                data = await response.json(content_type=None)
+        except aiohttp.ClientError as exc:
+            return f"RPC request failed for '{method}': {exc}"
+        except Exception as exc:  # pragma: no cover - defensive
+            return f"Unexpected RPC error for '{method}': {exc}"
+
+        if isinstance(data, dict) and data.get("error"):
+            error = data["error"]
+            message = error.get("message") if isinstance(error, dict) else error
+            return f"RPC method '{method}' returned error: {message}"
+
+        return data.get("result") if isinstance(data, dict) else data
 
     def _convert_asset_amount(self, amount_string: str, decimals: int) -> Decimal:
         """Convert asset amount string to decimal with proper decimal places
@@ -163,13 +225,13 @@ class NeoProvider:
             Dict[str, Any]: Address information including first use time, last use time, etc.
         """
         try:
-            validated_address = self._validate_address(address)
+            normalized_address, script_hash = self._normalize_address(address)
             # Get NEP-17 balances for the address
-            balances = await self.rpc_client.get_nep17_balances(validated_address)
+            balances = await self.rpc_client.get_nep17_balances(normalized_address)
             return self._handle_response({
-                "address": address,
+                "address": normalized_address,
                 "balances": balances,
-                "script_hash": str(validated_address)
+                "script_hash": f"0x{str(script_hash)}"
             })
         except Exception as e:
             raise Exception(f"Failed to get address info: {str(e)}")
@@ -194,12 +256,11 @@ class NeoProvider:
         Returns:
             Dict[str, Any]: Block information including transactions, timestamp, etc.
         """
-        try:
-            block_hash_uint = types.UInt256.from_string(block_hash)
-            block = await self.rpc_client.get_block(block_hash_uint)
-            return self._handle_response(block)
-        except Exception as e:
-            raise Exception(f"Failed to get block info: {str(e)}")
+        params = [block_hash, 1]
+        result = await self._make_request("getblock", params)
+        if isinstance(result, str):
+            raise Exception(f"Failed to get block info: {result}")
+        return self._handle_response(result)
 
     async def get_block_by_height(self, block_height: int) -> Dict[str, Any]:
         """Get block information by height
@@ -210,11 +271,11 @@ class NeoProvider:
         Returns:
             Dict[str, Any]: Block information including transactions, timestamp, etc.
         """
-        try:
-            block = await self.rpc_client.get_block(block_height)
-            return self._handle_response(block)
-        except Exception as e:
-            raise Exception(f"Failed to get block by height: {str(e)}")
+        params = [block_height, 1]
+        result = await self._make_request("getblock", params)
+        if isinstance(result, str):
+            raise Exception(f"Failed to get block by height: {result}")
+        return self._handle_response(result)
 
     async def get_block_count(self) -> int:
         """Get total block count
@@ -222,11 +283,10 @@ class NeoProvider:
         Returns:
             int: Total number of blocks on the network
         """
-        try:
-            count = await self.rpc_client.get_block_count()
-            return self._handle_response(count)
-        except Exception as e:
-            raise Exception(f"Failed to get block count: {str(e)}")
+        result = await self._make_request("getblockcount", [])
+        if isinstance(result, str):
+            raise Exception(f"Failed to get block count: {result}")
+        return self._handle_response(result)
 
     # Transaction-related methods
     async def get_transaction_info(self, tx_hash: str) -> Dict[str, Any]:
@@ -315,14 +375,19 @@ class NeoProvider:
         return 0
 
     async def close(self):
-        """Close the RPC client connection"""
+        """Close the RPC client connection."""
+        if self._session and not self._session.closed:
+            await self._session.close()
         await self.rpc_client.close()
 
     def __enter__(self):
-        """Context manager entry point"""
-        return self
+        raise RuntimeError("NeoProvider requires 'async with ...' usage")
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        """Context manager exit point - closes the RPC client"""
-        # Note: async close should be handled by the caller
-        pass
+        raise RuntimeError("NeoProvider requires 'async with ...' usage")
+
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.close()

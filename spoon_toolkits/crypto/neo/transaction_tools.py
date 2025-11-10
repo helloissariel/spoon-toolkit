@@ -21,12 +21,12 @@ class GetTransactionCountTool(BaseTool):
 
     async def execute(self, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetTransactionCount", {})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Transaction count: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetTransactionCount", {})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Transaction count: {result}")
         except Exception as e:
-            return ToolResult(error=str(e))
+                return ToolResult(error=str(e))
 
 class GetRawTransactionByHashTool(BaseTool):
     name: str = "get_raw_transaction_by_hash"
@@ -50,12 +50,12 @@ class GetRawTransactionByHashTool(BaseTool):
 
     async def execute(self, transaction_hash: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetRawTransactionByHash", {"TransactionHash": transaction_hash})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Raw transaction: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetRawTransactionByTransactionHash", {"TransactionHash": transaction_hash})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Raw transaction: {result}")
         except Exception as e:
-            return ToolResult(error=str(e))
+                return ToolResult(error=str(e))
 
 class GetRawTransactionByBlockHashTool(BaseTool):
     name: str = "get_raw_transaction_by_block_hash"
@@ -79,12 +79,12 @@ class GetRawTransactionByBlockHashTool(BaseTool):
 
     async def execute(self, block_hash: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetRawTransactionByBlockHash", {"BlockHash": block_hash})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Raw transactions: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetRawTransactionByBlockHash", {"BlockHash": block_hash})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Raw transactions: {result}")
         except Exception as e:
-            return ToolResult(error=str(e))
+                return ToolResult(error=str(e))
 
 class GetRawTransactionByBlockHeightTool(BaseTool):
     name: str = "get_raw_transaction_by_block_height"
@@ -101,19 +101,35 @@ class GetRawTransactionByBlockHeightTool(BaseTool):
                 "description": "Neo network type, must be 'mainnet' or 'testnet'",
                 "enum": ["mainnet", "testnet"],
                 "default": "testnet"
+            },
+            "Skip": {
+                "type": "integer",
+                "description": "the number of items to skip"
+            },
+            "Limit": {
+                "type": "integer",
+                "description": "the number of items to return"
             }
         },
         "required": ["block_height"]
     }
 
-    async def execute(self, block_height: int, network: str = "testnet") -> ToolResult:
+    async def execute(self, block_height: int, network: str = "testnet", Skip: int = None, Limit: int = None) -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetRawTransactionByBlockHeight", {"BlockHeight": block_height})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Raw transactions: {result}")
+            async with get_provider(network) as provider:
+                request_params = {"BlockHeight": block_height}
+
+                # Add optional parameters if provided
+                if Skip is not None:
+                    request_params["Skip"] = Skip
+                if Limit is not None:
+                    request_params["Limit"] = Limit
+
+                response = await provider._make_request("GetRawTransactionByBlockHeight", request_params)
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Raw transactions: {result}")
         except Exception as e:
-            return ToolResult(error=str(e))
+                return ToolResult(error=str(e))
 
 class GetRawTransactionByTransactionHashTool(BaseTool):
     name: str = "get_raw_transaction_by_transaction_hash"
@@ -137,12 +153,12 @@ class GetRawTransactionByTransactionHashTool(BaseTool):
 
     async def execute(self, transaction_hash: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetRawTransactionByTransactionHash", {"TransactionHash": transaction_hash})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Raw transaction: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetRawTransactionByTransactionHash", {"TransactionHash": transaction_hash})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Raw transaction: {result}")
         except Exception as e:
-            return ToolResult(error=str(e))
+                return ToolResult(error=str(e))
 
 class GetTransferByBlockHashTool(BaseTool):
     name: str = "get_transfer_by_block_hash"
@@ -166,12 +182,12 @@ class GetTransferByBlockHashTool(BaseTool):
 
     async def execute(self, block_hash: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetTransferByBlockHash", {"BlockHash": block_hash})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Transfers: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetTransferByBlockHash", {"BlockHash": block_hash})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Transfers: {result}")
         except Exception as e:
-            return ToolResult(error=str(e))
+                return ToolResult(error=str(e))
 
 class GetTransferByBlockHeightTool(BaseTool):
     name: str = "get_transfer_by_block_height"
@@ -195,12 +211,12 @@ class GetTransferByBlockHeightTool(BaseTool):
 
     async def execute(self, block_height: int, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetTransferByBlockHeight", {"BlockHeight": block_height})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Transfers: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetTransferByBlockHeight", {"BlockHeight": block_height})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Transfers: {result}")
         except Exception as e:
-            return ToolResult(error=str(e))
+                return ToolResult(error=str(e))
 
 class GetTransferEventByTransactionHashTool(BaseTool):
     name: str = "get_transfer_event_by_transaction_hash"
@@ -224,9 +240,9 @@ class GetTransferEventByTransactionHashTool(BaseTool):
 
     async def execute(self, transaction_hash: str, network: str = "testnet") -> ToolResult:
         try:
-            provider = get_provider(network)
-            response = provider._make_request("GetTransferEventByTransactionHash", {"TransactionHash": transaction_hash})
-            result = provider._handle_response(response)
-            return ToolResult(output=f"Transfer events: {result}")
+            async with get_provider(network) as provider:
+                response = await provider._make_request("GetTransferEventByTransactionHash", {"TransactionHash": transaction_hash})
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Transfer events: {result}")
         except Exception as e:
-            return ToolResult(error=str(e)) 
+                return ToolResult(error=str(e)) 
