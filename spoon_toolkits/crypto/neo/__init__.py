@@ -4,6 +4,7 @@
 from .address_tools import (
     GetAddressCountTool,
     GetAddressInfoTool,
+    ValidateAddressTool,
     GetActiveAddressesTool,
     GetTagByAddressesTool,
     GetTotalSentAndReceivedTool,
@@ -35,6 +36,7 @@ from .block_tools import (
 from .contract_tools import (
     GetContractCountTool,
     GetContractByHashTool,
+    GetContractStateTool,
     GetContractListByNameTool,
     GetVerifiedContractByContractHashTool,
     GetVerifiedContractTool,
@@ -103,9 +105,10 @@ from .neo_provider import NeoProvider
 from .base import get_provider
 
 __all__ = [
-    # Address tools (8)
+    # Address tools (9)
     "GetAddressCountTool",
     "GetAddressInfoTool",
+    "ValidateAddressTool",
     "GetActiveAddressesTool",
     "GetTagByAddressesTool",
     "GetTotalSentAndReceivedTool",
@@ -128,9 +131,10 @@ __all__ = [
     "GetRecentBlocksInfoTool",
     "GetBlockRewardByHashTool",
     
-    # Contract tools (5)
+    # Contract tools (6)
     "GetContractCountTool",
     "GetContractByHashTool",
+    "GetContractStateTool",
     "GetContractListByNameTool",
     "GetVerifiedContractByContractHashTool",
     "GetVerifiedContractTool",

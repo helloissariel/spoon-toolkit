@@ -96,11 +96,48 @@ class NeoProvider:
         normalized_address, _ = self._normalize_address(raw)
         return normalized_address
 
+    async def validate_address(self, address: str) -> Dict[str, Any]:
+        """Call Neo RPC `validateaddress` to inspect address metadata.
+
+        Args:
+            address: Neo address in Base58 or 0x-prefixed script hash form.
+
+        Returns:
+            Dict[str, Any]: RPC response detailing validity and related fields.
+        """
+        normalized_address, _ = self._normalize_address(address)
+        result = await self._make_request("validateaddress", [normalized_address])
+        if isinstance(result, str):
+            raise Exception(f"Failed to validate address: {result}")
+        return self._handle_response(result)
+
     def _handle_response(self, result: Any) -> Any:
         """Handle neo-mamba response and extract result."""
         if result is None:
             raise RuntimeError("Empty response from Neo RPC")
         return result
+
+    async def get_contract_state_rpc(self, contract_hash: str) -> Dict[str, Any]:
+        """Call official N3 `getcontractstate` RPC for raw contract metadata.
+
+        Args:
+            contract_hash: Script hash of the contract (with or without 0x prefix).
+
+        Returns:
+            Dict[str, Any]: Contract state returned by the RPC node.
+        """
+        if contract_hash.startswith("0x"):
+            contract_hash = contract_hash[2:]
+        try:
+            script_hash = types.UInt160.from_string(contract_hash)
+        except ValueError as exc:
+            raise ValueError(f"Invalid contract hash: {contract_hash}") from exc
+
+        serialized_hash = f"0x{script_hash}"
+        response = await self._make_request("getcontractstate", [serialized_hash])
+        if isinstance(response, str):
+            raise Exception(f"Failed to get contract state: {response}")
+        return self._handle_response(response)
 
     async def _ensure_session(self) -> aiohttp.ClientSession:
         """Ensure an aiohttp client session exists for raw RPC calls."""
