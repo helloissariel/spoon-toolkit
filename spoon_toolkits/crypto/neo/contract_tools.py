@@ -58,6 +58,34 @@ class GetContractByHashTool(BaseTool):
         except Exception as e:
             return ToolResult(error=str(e))
 
+class GetContractStateTool(BaseTool):
+    name: str = "get_contract_state"
+    description: str = "Call Neo's official getcontractstate RPC to fetch raw contract metadata directly from an N3 node. Returns the RPC payload, including manifest and nef data."
+    parameters: dict = {
+        "type": "object",
+        "properties": {
+            "contract_hash": {
+                "type": "string",
+                "description": "Contract script hash, accepts 0x-prefixed or plain hex (e.g., 0x1234..., a4cd...)."
+            },
+            "network": {
+                "type": "string",
+                "description": "Neo network type, must be 'mainnet' or 'testnet'",
+                "enum": ["mainnet", "testnet"],
+                "default": "testnet"
+            }
+        },
+        "required": ["contract_hash"]
+    }
+
+    async def execute(self, contract_hash: str, network: str = "testnet") -> ToolResult:
+        try:
+            async with get_provider(network) as provider:
+                result = await provider.get_contract_state_rpc(contract_hash)
+                return ToolResult(output=f"Contract state: {result}")
+        except Exception as e:
+            return ToolResult(error=str(e))
+
 class GetContractListByNameTool(BaseTool):
     name: str = "get_contract_list_by_name"
     description: str = "Get contract list by contract name with partial matching support on Neo blockchain. Useful when you need to find contracts by name or search for similar contracts. Returns contract list information."

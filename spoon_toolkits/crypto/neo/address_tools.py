@@ -22,7 +22,8 @@ class GetAddressCountTool(BaseTool):
     async def execute(self, network: str = "testnet") -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                result = await provider.get_address_count()
+                response = await provider._make_request("GetAddressCount", {})
+                result = provider._handle_response(response)
                 return ToolResult(output=f"Address count: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
@@ -52,6 +53,35 @@ class GetAddressInfoTool(BaseTool):
             async with get_provider(network) as provider:
                 result = await provider.get_address_info(address)
                 return ToolResult(output=f"Address info: {result}")
+        except Exception as e:
+            return ToolResult(error=str(e))
+
+
+class ValidateAddressTool(BaseTool):
+    name: str = "validate_address"
+    description: str = "Validate a Neo address using the RPC `validateaddress` method. Useful for confirming address ownership metadata or script hash conversion details. Returns the RPC validation payload."
+    parameters: dict = {
+        "type": "object",
+        "properties": {
+            "address": {
+                "type": "string",
+                "description": "Neo address, supports standard format and script hash format (e.g., NiEtVMWVYgpXrWkRTMwRaMJtJ41gD3912N, 0xaad8073e6df9caaf6abc0749250eb0b800c0e6f4)"
+            },
+            "network": {
+                "type": "string",
+                "description": "Neo network type, must be 'mainnet' or 'testnet'",
+                "enum": ["mainnet", "testnet"],
+                "default": "testnet"
+            }
+        },
+        "required": ["address"]
+    }
+
+    async def execute(self, address: str, network: str = "testnet") -> ToolResult:
+        try:
+            async with get_provider(network) as provider:
+                result = await provider.validate_address(address)
+                return ToolResult(output=f"Validation result: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
