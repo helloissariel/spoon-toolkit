@@ -22,7 +22,8 @@ class GetAddressCountTool(BaseTool):
     async def execute(self, network: str = "testnet") -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                result = await provider.get_address_count()
+                response = await provider._make_request("GetAddressCount", {})
+                result = provider._handle_response(response)
                 return ToolResult(output=f"Address count: {result}")
         except Exception as e:
             return ToolResult(error=str(e))

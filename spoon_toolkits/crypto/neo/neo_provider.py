@@ -273,16 +273,6 @@ class NeoProvider:
         except Exception as e:
             raise Exception(f"Failed to get address info: {str(e)}")
 
-    async def get_address_count(self) -> int:
-        """Get total address count
-
-        Returns:
-            int: Total number of addresses on the network
-        """
-        # Note: neo-mamba doesn't have a direct method for address count
-        # This is a limitation that may need to be addressed differently
-        return 0
-
     # Block-related methods
     async def get_block_info(self, block_hash: str) -> Dict[str, Any]:
         """Get block information by hash
@@ -400,16 +390,6 @@ class NeoProvider:
             return self._handle_response(contract_state)
         except Exception as e:
             raise Exception(f"Failed to get contract info: {str(e)}")
-
-    async def get_contract_count(self) -> int:
-        """Get total contract count
-
-        Returns:
-            int: Total number of contracts on the network
-        """
-        # Note: neo-mamba doesn't have a direct method for contract count
-        # This is a limitation that may need to be addressed differently
-        return 0
 
     async def close(self):
         """Close the RPC client connection."""
