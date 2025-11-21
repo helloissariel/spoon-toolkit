@@ -6,11 +6,8 @@ from .address_tools import (
     GetAddressInfoTool,
     ValidateAddressTool,
     GetActiveAddressesTool,
-    GetTagByAddressesTool,
     GetTotalSentAndReceivedTool,
-    GetRawTransactionByAddressTool,
     GetTransferByAddressTool,
-    GetNep11OwnedByAddressTool,
 )
 
 # Asset tools
@@ -18,7 +15,7 @@ from .asset_tools import (
     GetAssetCountTool,
     GetAssetInfoByHashTool,
     GetAssetInfoByNameTool,
-    GetAssetsInfoByUserAddressTool,
+    GetAssetInfosTool,
     GetAssetInfoByAssetAndAddressTool,
 )
 
@@ -36,7 +33,6 @@ from .block_tools import (
 from .contract_tools import (
     GetContractCountTool,
     GetContractByHashTool,
-    GetContractStateTool,
     GetContractListByNameTool,
     GetVerifiedContractByContractHashTool,
     GetVerifiedContractTool,
@@ -45,10 +41,11 @@ from .contract_tools import (
 # Transaction tools
 from .transaction_tools import (
     GetTransactionCountTool,
-    GetRawTransactionByHashTool,
+    GetTransactionCountByAddressTool,
     GetRawTransactionByBlockHashTool,
     GetRawTransactionByBlockHeightTool,
     GetRawTransactionByTransactionHashTool,
+    GetRawTransactionByAddressTool,
     GetTransferByBlockHashTool,
     GetTransferByBlockHeightTool,
     GetTransferEventByTransactionHashTool,
@@ -105,22 +102,19 @@ from .neo_provider import NeoProvider
 from .base import get_provider
 
 __all__ = [
-    # Address tools (9)
+    # Address tools (6)
     "GetAddressCountTool",
     "GetAddressInfoTool",
     "ValidateAddressTool",
     "GetActiveAddressesTool",
-    "GetTagByAddressesTool",
     "GetTotalSentAndReceivedTool",
-    "GetRawTransactionByAddressTool",
     "GetTransferByAddressTool",
-    "GetNep11OwnedByAddressTool",
     
     # Asset tools (5)
     "GetAssetCountTool",
     "GetAssetInfoByHashTool",
     "GetAssetInfoByNameTool",
-    "GetAssetsInfoByUserAddressTool",
+    "GetAssetInfosTool",
     "GetAssetInfoByAssetAndAddressTool",
     
     # Block tools (6)
@@ -131,20 +125,20 @@ __all__ = [
     "GetRecentBlocksInfoTool",
     "GetBlockRewardByHashTool",
     
-    # Contract tools (6)
+    # Contract tools (5)
     "GetContractCountTool",
     "GetContractByHashTool",
-    "GetContractStateTool",
     "GetContractListByNameTool",
     "GetVerifiedContractByContractHashTool",
     "GetVerifiedContractTool",
     
-    # Transaction tools (8)
+    # Transaction tools (9)
     "GetTransactionCountTool",
-    "GetRawTransactionByHashTool",
+    "GetTransactionCountByAddressTool",
     "GetRawTransactionByBlockHashTool",
     "GetRawTransactionByBlockHeightTool",
     "GetRawTransactionByTransactionHashTool",
+    "GetRawTransactionByAddressTool",
     "GetTransferByBlockHashTool",
     "GetTransferByBlockHeightTool",
     "GetTransferEventByTransactionHashTool",

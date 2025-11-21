@@ -23,8 +23,10 @@ class GetContractCountTool(BaseTool):
         try:
             async with get_provider(network) as provider:
                 response = await provider._make_request("GetContractCount", {})
-                result =  provider._handle_response(response)
-                
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "timeout" in response.lower()):
+                    return ToolResult(error=response)
+                result = provider._handle_response(response)
                 return ToolResult(output=f"Contract count: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
@@ -52,37 +54,11 @@ class GetContractByHashTool(BaseTool):
     async def execute(self, contract_hash: str, network: str = "testnet") -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                response = await provider._make_request("GetContractByContractHash", {"ContractHash": contract_hash})
+                # Ensure ContractHash has 0x prefix
+                normalized_contract_hash = provider._ensure_0x_prefix(contract_hash)
+                response = await provider._make_request("GetContractByContractHash", {"ContractHash": normalized_contract_hash})
                 result =  provider._handle_response(response)
                 return ToolResult(output=f"Contract info: {result}")
-        except Exception as e:
-            return ToolResult(error=str(e))
-
-class GetContractStateTool(BaseTool):
-    name: str = "get_contract_state"
-    description: str = "Call Neo's official getcontractstate RPC to fetch raw contract metadata directly from an N3 node. Returns the RPC payload, including manifest and nef data."
-    parameters: dict = {
-        "type": "object",
-        "properties": {
-            "contract_hash": {
-                "type": "string",
-                "description": "Contract script hash, accepts 0x-prefixed or plain hex (e.g., 0x1234..., a4cd...)."
-            },
-            "network": {
-                "type": "string",
-                "description": "Neo network type, must be 'mainnet' or 'testnet'",
-                "enum": ["mainnet", "testnet"],
-                "default": "testnet"
-            }
-        },
-        "required": ["contract_hash"]
-    }
-
-    async def execute(self, contract_hash: str, network: str = "testnet") -> ToolResult:
-        try:
-            async with get_provider(network) as provider:
-                result = await provider.get_contract_state_rpc(contract_hash)
-                return ToolResult(output=f"Contract state: {result}")
         except Exception as e:
             return ToolResult(error=str(e))
 
@@ -159,8 +135,10 @@ class GetVerifiedContractByContractHashTool(BaseTool):
     async def execute(self, contract_hash: str, network: str = "testnet", UpdateCounter: int = None) -> ToolResult:
         try:
             async with get_provider(network) as provider:
+                # Ensure ContractHash has 0x prefix
+                normalized_contract_hash = provider._ensure_0x_prefix(contract_hash)
                 # Build request parameters
-                request_params = {"ContractHash": contract_hash}
+                request_params = {"ContractHash": normalized_contract_hash}
 
                 # Add optional parameters if provided
                 if UpdateCounter is not None:

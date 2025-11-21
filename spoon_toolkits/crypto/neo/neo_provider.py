@@ -12,6 +12,7 @@ The provider handles:
 - Network-specific API endpoints
 """
 
+import asyncio
 import json
 import os
 import ssl
@@ -60,7 +61,8 @@ class NeoProvider:
         # Initialize neo-mamba RPC client
         self.rpc_client = NeoRpcClient(self.rpc_url)
         self._session: Optional[aiohttp.ClientSession] = None
-        self._request_timeout = float(os.getenv("NEO_RPC_TIMEOUT", "15"))
+        # Increase default timeout to 60 seconds to handle slow network connections
+        self._request_timeout = float(os.getenv("NEO_RPC_TIMEOUT", "60"))
 
     def _normalize_address(self, raw: str) -> tuple[str, types.UInt160]:
         """Normalize an address into Base58 address + script hash tuple.
@@ -86,6 +88,42 @@ class NeoProvider:
             normalized_address = raw
             script_hash = walletutils.address_to_script_hash(raw)
         return normalized_address, script_hash
+
+    def _ensure_0x_prefix(self, value: str) -> str:
+        """Ensure the value starts with 0x prefix. If not, add it.
+        
+        Args:
+            value: The value to ensure has 0x prefix (e.g., hash, contract hash)
+            
+        Returns:
+            str: The value with 0x prefix
+        """
+        if not value:
+            return value
+        if not value.startswith("0x"):
+            return f"0x{value}"
+        return value
+
+    def _address_to_script_hash(self, address: str) -> str:
+        """Convert an address to script hash format (0x...).
+        
+        This method handles both Base58 addresses and 0x-prefixed script hashes.
+        If the address is already in script hash format, it returns it as-is.
+        Otherwise, it converts the Base58 address to script hash format.
+        
+        Args:
+            address: Neo address in Base58 format or script hash format (0x...)
+            
+        Returns:
+            str: Address in script hash format (0x...)
+        """
+        if address.startswith("0x"):
+            # Already in script hash format
+            return address
+        else:
+            # Convert Base58 address to script hash format
+            _, script_hash = self._normalize_address(address)
+            return f"0x{str(script_hash).replace('0x', '')}"
 
     async def _validate_address(self, raw: str) -> str:
         """Backward-compatible wrapper returning a normalized address string.
@@ -117,28 +155,6 @@ class NeoProvider:
             raise RuntimeError("Empty response from Neo RPC")
         return result
 
-    async def get_contract_state_rpc(self, contract_hash: str) -> Dict[str, Any]:
-        """Call official N3 `getcontractstate` RPC for raw contract metadata.
-
-        Args:
-            contract_hash: Script hash of the contract (with or without 0x prefix).
-
-        Returns:
-            Dict[str, Any]: Contract state returned by the RPC node.
-        """
-        if contract_hash.startswith("0x"):
-            contract_hash = contract_hash[2:]
-        try:
-            script_hash = types.UInt160.from_string(contract_hash)
-        except ValueError as exc:
-            raise ValueError(f"Invalid contract hash: {contract_hash}") from exc
-
-        serialized_hash = f"0x{script_hash}"
-        response = await self._make_request("getcontractstate", [serialized_hash])
-        if isinstance(response, str):
-            raise Exception(f"Failed to get contract state: {response}")
-        return self._handle_response(response)
-
     async def _ensure_session(self) -> aiohttp.ClientSession:
         """Ensure an aiohttp client session exists for raw RPC calls."""
         if self._session and not self._session.closed:
@@ -149,7 +165,12 @@ class NeoProvider:
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl.CERT_NONE
 
-        timeout = aiohttp.ClientTimeout(total=self._request_timeout)
+        # Increase connection timeout and total timeout for slow networks
+        timeout = aiohttp.ClientTimeout(
+            total=self._request_timeout,
+            connect=30,  # Connection timeout (30 seconds)
+            sock_read=self._request_timeout  # Socket read timeout
+        )
         connector = aiohttp.TCPConnector(ssl=ssl_context)
         self._session = aiohttp.ClientSession(timeout=timeout, connector=connector)
         return self._session
@@ -181,18 +202,25 @@ class NeoProvider:
             "id": 1,
         }
         try:
-            async with session.post(self.rpc_url, json=payload) as response:
+            timeout = aiohttp.ClientTimeout(total=self._request_timeout)
+            async with session.post(self.rpc_url, json=payload, timeout=timeout) as response:
                 response.raise_for_status()
                 data = await response.json(content_type=None)
+        except asyncio.TimeoutError as exc:
+            return f"RPC request timeout for '{method}' (timeout: {self._request_timeout}s, URL: {self.rpc_url}): {exc}"
         except aiohttp.ClientError as exc:
-            return f"RPC request failed for '{method}': {exc}"
+            return f"RPC request failed for '{method}' (URL: {self.rpc_url}): {exc}"
         except Exception as exc:  # pragma: no cover - defensive
-            return f"Unexpected RPC error for '{method}': {exc}"
+            return f"Unexpected RPC error for '{method}' (URL: {self.rpc_url}): {type(exc).__name__}: {exc}"
 
         if isinstance(data, dict) and data.get("error"):
             error = data["error"]
-            message = error.get("message") if isinstance(error, dict) else error
-            return f"RPC method '{method}' returned error: {message}"
+            if isinstance(error, dict):
+                message = error.get("message", str(error))
+                code = error.get("code", "unknown")
+                return f"RPC method '{method}' returned error (code: {code}): {message}"
+            else:
+                return f"RPC method '{method}' returned error: {error}"
 
         return data.get("result") if isinstance(data, dict) else data
 
@@ -243,14 +271,58 @@ class NeoProvider:
         """Get active addresses count for specified days
 
         Args:
-            days (int): Number of days to get active address counts for
+            days (int): Number of days to get active address counts for (1-365)
 
         Returns:
             List[int]: List of daily active address counts
+
+        Raises:
+            ValueError: If days is not in valid range (1-365)
+            Exception: If API request fails
         """
-        # Note: neo-mamba doesn't have a direct method for active addresses
-        # This is a limitation that may need to be addressed differently
-        return []
+        # Validate days parameter
+        if not isinstance(days, int) or days < 1 or days > 365:
+            raise ValueError(f"Days must be an integer between 1 and 365, got: {days}")
+
+        try:
+            # Call GetActiveAddresses API
+            # API expects: {"Days": <number>} - note the capital D
+            # API response format: {"result": {"result": [...], "totalCount": <number>}, "error": null}
+            response = await self._make_request("GetActiveAddresses", {"Days": days})
+            result = self._handle_response(response)
+
+            # Handle error response (string indicates error)
+            if isinstance(result, str) and ("error" in result.lower() or "failed" in result.lower()):
+                raise Exception(f"GetActiveAddresses API error: {result}")
+
+            # API response structure: _make_request returns data.get("result")
+            # So result contains: {"result": [...], "totalCount": <number>}
+            if isinstance(result, dict):
+                # Extract the result list from response
+                if "result" in result:
+                    active_addresses_list = result["result"]
+                    if isinstance(active_addresses_list, list):
+                        # Convert to list of integers if needed
+                        return [int(addr) if isinstance(addr, (int, str)) else addr for addr in active_addresses_list]
+                    return active_addresses_list
+                # If result is directly a list (fallback case)
+                elif isinstance(result, list):
+                    return [int(addr) if isinstance(addr, (int, str)) else addr for addr in result]
+                else:
+                    # Unexpected format, return empty list
+                    return []
+            # If result is directly a list
+            elif isinstance(result, list):
+                return [int(addr) if isinstance(addr, (int, str)) else addr for addr in result]
+            else:
+                # Fallback: return empty list if response format is unexpected
+                return []
+        except ValueError:
+            # Re-raise ValueError as-is
+            raise
+        except Exception as e:
+            # Re-raise with more context
+            raise Exception(f"Failed to get active addresses for {days} days: {str(e)}")
 
     async def get_address_info(self, address: str) -> Dict[str, Any]:
         """Get address information
