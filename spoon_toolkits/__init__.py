@@ -41,21 +41,19 @@ from .data_platforms.desearch.builtin_tools import (
 )
 
 from .crypto.neo import (
-    # Address tools (8)
+    # Address tools (6)
     GetAddressCountTool,
     GetAddressInfoTool,
+    ValidateAddressTool,
     GetActiveAddressesTool,
-    GetTagByAddressesTool,
     GetTotalSentAndReceivedTool,
-    GetRawTransactionByAddressTool,
     GetTransferByAddressTool,
-    GetNep11ByAddressAndHashTool,
 
     # Asset tools (5)
     GetAssetCountTool,
     GetAssetInfoByHashTool,
     GetAssetInfoByNameTool,
-    GetAssetsInfoByUserAddressTool,
+    GetAssetInfosTool,
     GetAssetInfoByAssetAndAddressTool,
 
     # Block tools (6)
@@ -73,9 +71,9 @@ from .crypto.neo import (
     GetVerifiedContractByContractHashTool,
     GetVerifiedContractTool,
 
-    # Transaction tools (8)
+    # Transaction tools (9)
     GetTransactionCountTool,
-    GetRawTransactionByHashTool,
+    GetTransactionCountByAddressTool,
     GetRawTransactionByBlockHashTool,
     GetRawTransactionByBlockHeightTool,
     GetRawTransactionByTransactionHashTool,
@@ -180,21 +178,19 @@ __all__ = [
     "DesearchAcademicSearchTool",
     "DesearchTwitterSearchTool",
 
-    # Neo Address tools (8)
+    # Neo Address tools (6)
     "GetAddressCountTool",
     "GetAddressInfoTool",
+    "ValidateAddressTool",
     "GetActiveAddressesTool",
-    "GetTagByAddressesTool",
     "GetTotalSentAndReceivedTool",
-    "GetRawTransactionByAddressTool",
     "GetTransferByAddressTool",
-    "GetNep11OwnedByAddressTool",
 
     # Neo Asset tools (5)
     "GetAssetCountTool",
     "GetAssetInfoByHashTool",
     "GetAssetInfoByNameTool",
-    "GetAssetsInfoByUserAddressTool",
+    "GetAssetInfosTool",
     "GetAssetInfoByAssetAndAddressTool",
 
     # Neo Block tools (6)
@@ -213,12 +209,13 @@ __all__ = [
     "GetVerifiedContractTool",
     "GetSourceCodeByContractHashTool",
 
-    # Neo Transaction tools (8)
+    # Neo Transaction tools (9)
     "GetTransactionCountTool",
-    "GetRawTransactionByHashTool",
+    "GetTransactionCountByAddressTool",
     "GetRawTransactionByBlockHashTool",
     "GetRawTransactionByBlockHeightTool",
     "GetRawTransactionByTransactionHashTool",
+    "GetRawTransactionByAddressTool",
     "GetTransferByBlockHashTool",
     "GetTransferByBlockHeightTool",
     "GetTransferEventByTransactionHashTool",
@@ -234,9 +231,8 @@ __all__ = [
     "GetVotesByCandidateAddressTool",
     "GetTotalVotesTool",
 
-    # Neo NEP tools (12)
+    # Neo NEP tools (11)
     "GetNep11BalanceTool",
-    "GetNep11OwnedByAddressTool",
     "GetNep11ByAddressAndHashTool",
     "GetNep11TransferByAddressTool",
     "GetNep11TransferByBlockHeightTool",
@@ -248,10 +244,9 @@ __all__ = [
     "GetNep17TransferByTransactionHashTool",
     "GetNep17TransferCountByAddressTool",
 
-    # Neo Smart Contract Call tools (3)
+    # Neo Smart Contract Call tools (2)
     "InvokeContractTool",
     "TestInvokeContractTool",
-    "GetContractStateTool",
 
     # Neo Application Log and State tools (2)
     "GetApplicationLogTool",

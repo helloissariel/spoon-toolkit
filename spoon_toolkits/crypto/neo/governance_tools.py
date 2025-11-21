@@ -41,6 +41,9 @@ class GetCommitteeInfoTool(BaseTool):
                     request_params["Limit"] = Limit
 
                 response = await provider._make_request("GetCommittee", request_params)
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "timeout" in response.lower()):
+                    return ToolResult(error=response)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Committee info: {result}")
         except Exception as e:

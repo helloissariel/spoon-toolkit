@@ -23,6 +23,9 @@ class GetCandidateCountTool(BaseTool):
         try:
             async with get_provider(network) as provider:
                 response = await provider._make_request("GetCandidateCount", {})
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "timeout" in response.lower()):
+                    return ToolResult(error=response)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Candidate count: {result}")
         except Exception as e:
@@ -30,13 +33,13 @@ class GetCandidateCountTool(BaseTool):
 
 class GetCandidateByAddressTool(BaseTool):
     name: str = "get_candidate_by_address"
-    description: str = "Get detailed candidate information by public key on Neo blockchain. Useful when you need to verify candidate status or analyze specific candidate information. Returns candidate information."
+    description: str = "Get detailed candidate information by address on Neo blockchain. Useful when you need to verify candidate status or analyze specific candidate information. Returns candidate information."
     parameters: dict = {
         "type": "object",
         "properties": {
             "address": {
                 "type": "string",
-                "description": "Candidate public key in hex format (e.g., 0214baf0ceea3a66f17e7e1e839ea25fd8bed6cd82e6bb6e68250189065f44ff01)"
+                "description": "Candidate address in script hash format (e.g., 0xaa606e99a6d1cb45ba34872864a3578c8a668143) or standard format. This is a required parameter."
             },
             "network": {
                 "type": "string",
@@ -51,8 +54,13 @@ class GetCandidateByAddressTool(BaseTool):
     async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                # For candidate queries, address is actually the public key
-                response = await provider._make_request("GetCandidateByAddress", {"Address": address})
+                # Convert address to script hash format
+                address_script_hash = provider._address_to_script_hash(address)
+                # Address is required parameter for GetCandidateByAddress API
+                response = await provider._make_request("GetCandidateByAddress", {"Address": address_script_hash})
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "timeout" in response.lower()):
+                    return ToolResult(error=response)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Candidate info: {result}")
         except Exception as e:
@@ -89,8 +97,15 @@ class GetCandidateByVoterAddressTool(BaseTool):
     async def execute(self, voter_address: str, network: str = "testnet", Skip: int = None, Limit: int = None) -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                validated_address = await provider._validate_address(voter_address)
-                request_params = {"VoterAddress": validated_address}
+                # Convert Base58 address to script hash format if needed
+                if voter_address.startswith("0x"):
+                    # Already in script hash format
+                    voter_address_script_hash = voter_address
+                else:
+                    # Convert Base58 address to script hash format
+                    _, script_hash = provider._normalize_address(voter_address)
+                    voter_address_script_hash = f"0x{str(script_hash).replace('0x', '')}"
+                request_params = {"VoterAddress": voter_address_script_hash}
 
                 # Add optional parameters if provided
                 if Skip is not None:
@@ -99,6 +114,9 @@ class GetCandidateByVoterAddressTool(BaseTool):
                     request_params["Limit"] = Limit
 
                 response = await provider._make_request("GetCandidateByVoterAddress", request_params)
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "timeout" in response.lower()):
+                    return ToolResult(error=response)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Candidate info: {result}")
         except Exception as e:
@@ -135,8 +153,9 @@ class GetScVoteCallByCandidateAddressTool(BaseTool):
     async def execute(self, candidate_address: str, network: str = "testnet", Skip: int = None, Limit: int = None) -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                validated_address = await provider._validate_address(candidate_address)
-                request_params = {"CandidateAddress": validated_address}
+                # Convert address to script hash format
+                candidate_address_script_hash = provider._address_to_script_hash(candidate_address)
+                request_params = {"CandidateAddress": candidate_address_script_hash}
 
                 # Add optional parameters if provided
                 if Skip is not None:
@@ -145,6 +164,9 @@ class GetScVoteCallByCandidateAddressTool(BaseTool):
                     request_params["Limit"] = Limit
 
                 response = await provider._make_request("GetScVoteCallByCandidateAddress", request_params)
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "timeout" in response.lower()):
+                    return ToolResult(error=response)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Vote calls: {result}")
         except Exception as e:
@@ -173,7 +195,9 @@ class GetScVoteCallByTransactionHashTool(BaseTool):
     async def execute(self, transaction_hash: str, network: str = "testnet") -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                response = await provider._make_request("GetScVoteCallByTransactionHash", {"TransactionHash": transaction_hash})
+                # Ensure transaction hash has 0x prefix
+                normalized_hash = provider._ensure_0x_prefix(transaction_hash)
+                response = await provider._make_request("GetScVoteCallByTransactionHash", {"TransactionHash": normalized_hash})
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Vote calls: {result}")
         except Exception as e:
@@ -210,8 +234,15 @@ class GetScVoteCallByVoterAddressTool(BaseTool):
     async def execute(self, voter_address: str, network: str = "testnet", Skip: int = None, Limit: int = None) -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                validated_address = await provider._validate_address(voter_address)
-                request_params = {"VoterAddress": validated_address}
+                # Convert Base58 address to script hash format if needed
+                if voter_address.startswith("0x"):
+                    # Already in script hash format
+                    voter_address_script_hash = voter_address
+                else:
+                    # Convert Base58 address to script hash format
+                    _, script_hash = provider._normalize_address(voter_address)
+                    voter_address_script_hash = f"0x{str(script_hash).replace('0x', '')}"
+                request_params = {"VoterAddress": voter_address_script_hash}
 
                 # Add optional parameters if provided
                 if Skip is not None:
@@ -220,6 +251,9 @@ class GetScVoteCallByVoterAddressTool(BaseTool):
                     request_params["Limit"] = Limit
 
                 response = await provider._make_request("GetScVoteCallByVoterAddress", request_params)
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "timeout" in response.lower()):
+                    return ToolResult(error=response)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Vote calls: {result}")
         except Exception as e:
@@ -256,8 +290,9 @@ class GetVotersByCandidateAddressTool(BaseTool):
     async def execute(self, candidate_address: str, network: str = "testnet", Skip: int = None, Limit: int = None) -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                validated_address = await provider._validate_address(candidate_address)
-                request_params = {"CandidateAddress": validated_address}
+                # Convert address to script hash format
+                candidate_address_script_hash = provider._address_to_script_hash(candidate_address)
+                request_params = {"CandidateAddress": candidate_address_script_hash}
 
                 # Add optional parameters if provided
                 if Skip is not None:
@@ -266,6 +301,9 @@ class GetVotersByCandidateAddressTool(BaseTool):
                     request_params["Limit"] = Limit
 
                 response = await provider._make_request("GetVotersByCandidateAddress", request_params)
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "timeout" in response.lower()):
+                    return ToolResult(error=response)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Voters: {result}")
         except Exception as e:
@@ -294,8 +332,12 @@ class GetVotesByCandidateAddressTool(BaseTool):
     async def execute(self, candidate_address: str, network: str = "testnet") -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                validated_address = await provider._validate_address(candidate_address)
-                response = await provider._make_request("GetVotesByCandidateAddress", {"CandidateAddress": validated_address})
+                # Convert address to script hash format
+                candidate_address_script_hash = provider._address_to_script_hash(candidate_address)
+                response = await provider._make_request("GetVotesByCandidateAddress", {"CandidateAddress": candidate_address_script_hash})
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "timeout" in response.lower()):
+                    return ToolResult(error=response)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Votes: {result}")
         except Exception as e:
@@ -321,6 +363,9 @@ class GetTotalVotesTool(BaseTool):
         try:
             async with get_provider(network) as provider:
                 response = await provider._make_request("GetTotalVotes", {})
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "timeout" in response.lower()):
+                    return ToolResult(error=response)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Total votes: {result}")
         except Exception as e:

@@ -27,9 +27,14 @@ class GetApplicationLogTool(BaseTool):
     async def execute(self, transaction_hash: str, network: str = "testnet") -> ToolResult:
         try:
             async with get_provider(network) as provider:
+                # Ensure transaction hash has 0x prefix
+                normalized_hash = provider._ensure_0x_prefix(transaction_hash)
                 response = await provider._make_request("GetApplicationLogByTransactionHash", {
-                    "TransactionHash": transaction_hash
+                    "TransactionHash": normalized_hash
                 })
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "timeout" in response.lower()):
+                    return ToolResult(error=response)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Application log: {result}")
         except Exception as e:
@@ -67,8 +72,10 @@ class GetApplicationStateTool(BaseTool):
     async def execute(self, block_hash: str, network: str = "testnet", Skip: int = None, Limit: int = None) -> ToolResult:
         try:
             async with get_provider(network) as provider:
+                # Ensure block hash has 0x prefix
+                normalized_block_hash = provider._ensure_0x_prefix(block_hash)
                 # Build request parameters
-                request_params = {"BlockHash": block_hash}
+                request_params = {"BlockHash": normalized_block_hash}
 
                 # Add optional parameters if provided
                 if Skip is not None:
@@ -77,6 +84,9 @@ class GetApplicationStateTool(BaseTool):
                     request_params["Limit"] = Limit
 
                 response = await provider._make_request("GetApplicationLogByBlockHash", request_params)
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "timeout" in response.lower()):
+                    return ToolResult(error=response)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Application state: {result}")
         except Exception as e:

@@ -23,20 +23,25 @@ class GetTransactionCountTool(BaseTool):
         try:
             async with get_provider(network) as provider:
                 response = await provider._make_request("GetTransactionCount", {})
+                
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "cannot unmarshal" in response.lower()):
+                    return ToolResult(error=response)
+                
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Transaction count: {result}")
         except Exception as e:
-                return ToolResult(error=str(e))
+            return ToolResult(error=str(e))
 
-class GetRawTransactionByHashTool(BaseTool):
-    name: str = "get_raw_transaction_by_hash"
-    description: str = "Get raw transaction data by transaction hash on Neo blockchain. Useful when you need to analyze transaction details or verify transaction information. Returns raw transaction data."
+class GetTransactionCountByAddressTool(BaseTool):
+    name: str = "get_transaction_count_by_address"
+    description: str = "Get total number of transactions for a specific address on Neo blockchain. Useful when you need to analyze address activity or understand transaction volume for a particular address. Returns an integer representing the total transaction count for the address."
     parameters: dict = {
         "type": "object",
         "properties": {
-            "transaction_hash": {
+            "address": {
                 "type": "string",
-                "description": "Transaction hash, must be valid hexadecimal format (e.g., 0x1234567890abcdef)"
+                "description": "Neo address, supports standard format and script hash format (e.g., NiEtVMWVYgpXrWkRTMwRaMJtJ41gD3912N, 0xaad8073e6df9caaf6abc0749250eb0b800c0e6f4)"
             },
             "network": {
                 "type": "string",
@@ -45,17 +50,23 @@ class GetRawTransactionByHashTool(BaseTool):
                 "default": "testnet"
             }
         },
-        "required": ["transaction_hash"]
+        "required": ["address"]
     }
 
-    async def execute(self, transaction_hash: str, network: str = "testnet") -> ToolResult:
+    async def execute(self, address: str, network: str = "testnet") -> ToolResult:
         try:
             async with get_provider(network) as provider:
-                response = await provider._make_request("GetRawTransactionByTransactionHash", {"TransactionHash": transaction_hash})
+                # Convert address to script hash format
+                address_script_hash = provider._address_to_script_hash(address)
+                
+                response = await provider._make_request("GetTransactionCountByAddress", {"Address": address_script_hash})
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "timeout" in response.lower()):
+                    return ToolResult(error=response)
                 result = provider._handle_response(response)
-                return ToolResult(output=f"Raw transaction: {result}")
+                return ToolResult(output=f"Transaction count: {result}")
         except Exception as e:
-                return ToolResult(error=str(e))
+            return ToolResult(error=str(e))
 
 class GetRawTransactionByBlockHashTool(BaseTool):
     name: str = "get_raw_transaction_by_block_hash"
@@ -81,6 +92,9 @@ class GetRawTransactionByBlockHashTool(BaseTool):
         try:
             async with get_provider(network) as provider:
                 response = await provider._make_request("GetRawTransactionByBlockHash", {"BlockHash": block_hash})
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "timeout" in response.lower()):
+                    return ToolResult(error=response)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Raw transactions: {result}")
         except Exception as e:
@@ -126,6 +140,9 @@ class GetRawTransactionByBlockHeightTool(BaseTool):
                     request_params["Limit"] = Limit
 
                 response = await provider._make_request("GetRawTransactionByBlockHeight", request_params)
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "timeout" in response.lower()):
+                    return ToolResult(error=response)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Raw transactions: {result}")
         except Exception as e:
@@ -133,7 +150,7 @@ class GetRawTransactionByBlockHeightTool(BaseTool):
 
 class GetRawTransactionByTransactionHashTool(BaseTool):
     name: str = "get_raw_transaction_by_transaction_hash"
-    description: str = "Get raw transaction data by transaction hash on Neo blockchain (same functionality as GetRawTransactionByHashTool). Useful when you need to retrieve raw transaction data for analysis or verification. Returns raw transaction data."
+    description: str = "Get raw transaction data by transaction hash on Neo blockchain. Useful when you need to retrieve raw transaction data for analysis or verification. Returns raw transaction data."
     parameters: dict = {
         "type": "object",
         "properties": {
@@ -155,6 +172,9 @@ class GetRawTransactionByTransactionHashTool(BaseTool):
         try:
             async with get_provider(network) as provider:
                 response = await provider._make_request("GetRawTransactionByTransactionHash", {"TransactionHash": transaction_hash})
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "timeout" in response.lower()):
+                    return ToolResult(error=response)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Raw transaction: {result}")
         except Exception as e:
@@ -184,6 +204,9 @@ class GetTransferByBlockHashTool(BaseTool):
         try:
             async with get_provider(network) as provider:
                 response = await provider._make_request("GetTransferByBlockHash", {"BlockHash": block_hash})
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "timeout" in response.lower()):
+                    return ToolResult(error=response)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Transfers: {result}")
         except Exception as e:
@@ -213,6 +236,9 @@ class GetTransferByBlockHeightTool(BaseTool):
         try:
             async with get_provider(network) as provider:
                 response = await provider._make_request("GetTransferByBlockHeight", {"BlockHeight": block_height})
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "timeout" in response.lower()):
+                    return ToolResult(error=response)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Transfers: {result}")
         except Exception as e:
@@ -242,7 +268,63 @@ class GetTransferEventByTransactionHashTool(BaseTool):
         try:
             async with get_provider(network) as provider:
                 response = await provider._make_request("GetTransferEventByTransactionHash", {"TransactionHash": transaction_hash})
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "timeout" in response.lower()):
+                    return ToolResult(error=response)
                 result = provider._handle_response(response)
                 return ToolResult(output=f"Transfer events: {result}")
         except Exception as e:
-                return ToolResult(error=str(e)) 
+                return ToolResult(error=str(e))
+
+class GetRawTransactionByAddressTool(BaseTool):
+    name: str = "get_raw_transaction_by_address"
+    description: str = "Get raw transaction data by address on Neo blockchain. Useful when you need to analyze all transactions associated with a specific address or track address transaction history. Returns raw transaction data with pagination support."
+    parameters: dict = {
+        "type": "object",
+        "properties": {
+            "address": {
+                "type": "string",
+                "description": "Neo address, supports standard format and script hash format (e.g., NiEtVMWVYgpXrWkRTMwRaMJtJ41gD3912N, 0xaad8073e6df9caaf6abc0749250eb0b800c0e6f4)"
+            },
+            "network": {
+                "type": "string",
+                "description": "Neo network type, must be 'mainnet' or 'testnet'",
+                "enum": ["mainnet", "testnet"],
+                "default": "testnet"
+            },
+            "Limit": {
+                "type": "integer",
+                "description": "the number of items to return"
+            },
+            "Skip": {
+                "type": "integer",
+                "description": "the number of items to skip"
+            }
+        },
+        "required": ["address"]
+    }
+
+    async def execute(self, address: str, network: str = "testnet", Limit: int = None, Skip: int = None) -> ToolResult:
+        try:
+            async with get_provider(network) as provider:
+                # GetRawTransactionByAddress API requires Address in script hash format (0x...)
+                # If address is not already in script hash format, convert it
+                # Convert address to script hash format
+                address_script_hash = provider._address_to_script_hash(address)
+                
+                request_params = {"Address": address_script_hash}
+                
+                # Add optional parameters if provided
+                if Limit is not None:
+                    request_params["Limit"] = Limit
+                if Skip is not None:
+                    request_params["Skip"] = Skip
+                
+                response = await provider._make_request("GetRawTransactionByAddress", request_params)
+                # Check if response is an error string
+                if isinstance(response, str) and ("error" in response.lower() or "failed" in response.lower() or "unexpected" in response.lower() or "timeout" in response.lower()):
+                    return ToolResult(error=response)
+                result = provider._handle_response(response)
+                return ToolResult(output=f"Raw transactions: {result}")
+        except Exception as e:
+            return ToolResult(error=str(e)) 
