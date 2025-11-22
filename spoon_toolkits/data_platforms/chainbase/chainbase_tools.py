@@ -225,7 +225,10 @@ class ContractCallTool(BaseTool):
             },
             "params": {
                 "type": "array",
-                "description": "The parameters to pass to the function"
+                "description": "The parameters to pass to the function",
+                "items": {
+                    "type": "string"
+                }
             },
             "to_block": {
                 "type": "string",
