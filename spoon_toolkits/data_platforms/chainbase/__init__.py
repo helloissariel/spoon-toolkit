@@ -5,12 +5,12 @@ import dotenv
 dotenv.load_dotenv()
 
 # Import all module servers
-from balance import mcp as balance_server
-from basic import mcp as basic_server
-from token_api import mcp as token_api_server
+from .balance import mcp as balance_server
+from .basic import mcp as basic_server
+from .token_api import mcp as token_api_server
 
 # Import tool classes
-from chainbase_tools import (
+from .chainbase_tools import (
     GetLatestBlockNumberTool,
     GetBlockByNumberTool,
     GetTransactionByHashTool,
