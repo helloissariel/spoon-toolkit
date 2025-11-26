@@ -26,7 +26,6 @@ dependencies = [
     "pydantic>=2.10.4",
     "python-dotenv>=1.0.1",
     "typing-extensions>=4.12.2",
-    "mem0ai>=0.0.1",
 
     # Crypto PowerData dependencies
     "ccxt>=4.0.0",
