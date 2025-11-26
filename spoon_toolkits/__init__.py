@@ -132,6 +132,8 @@ from .crypto.evm import (
     EvmSwapQuoteTool,
 )
 
+from .memory.mem0_tools import AddMemoryTool, SearchMemoryTool, GetAllMemoryTool
+
 
 
 __all__ = [
@@ -277,4 +279,9 @@ __all__ = [
     "EvmErc20TransferTool",
     "EvmBalanceTool",
     "EvmSwapQuoteTool",
+
+    # Memory tools
+    "AddMemoryTool",
+    "SearchMemoryTool",
+    "GetAllMemoryTool",
 ]
