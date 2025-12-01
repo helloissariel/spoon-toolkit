@@ -1,4 +1,4 @@
-"""Mem0-powered memory tools (Refactored)."""
+"""Mem0-powered memory tools ."""
 
 import logging
 from typing import Any, Dict, List, Optional, Callable
