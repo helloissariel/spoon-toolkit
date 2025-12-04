@@ -41,7 +41,7 @@ class SolanaToolkitDemo:
         "network": "devnet",
         "rpc_url": "https://api.devnet.solana.com",
         "wallet_addresses": {
-            "wallet_1": "8fBPSfKb7Qso7mVfSV5GxfgLdjeBmBkMNYJyu3YkW4dP",
+            "wallet_1": "BJyWLDo4xYDs2bp2dK2BcMFBJuRxnUBcJkNqjxgg81hR",  # Generated wallet (has private key)
             "wallet_2": "GMkCtcMmLTQ3jwxExRvSqCE5u4ypFYNa6TxVMZ9smuud",
             "wallet_3": "5ZZKpFcZDqJtgFH1Vq8WXCP8QJnwhtXV7CEe1JnjkADZ",
         },
@@ -114,16 +114,35 @@ class SolanaToolkitDemo:
             system_prompt: str = f"""
             You are a Solana blockchain specialist focused on {description}.
             Use the available tools to analyze Solana blockchain data and provide comprehensive insights.
-            Always specify network='{network}' when calling tools.
+            
+            **CRITICAL - RPC URL Configuration:**
+            - You MUST provide the rpc_url parameter when calling tools
+            - For Solana {network}, use: "https://api.{network}.solana.com"
+            - Example: solana_wallet_info(address="...", rpc_url="https://api.devnet.solana.com")
+            - NEVER omit the rpc_url parameter - it is required for proper network connection
+            
+            **CRITICAL - Private Key Handling:**
+            - Private keys are automatically read from environment variables (SOLANA_PRIVATE_KEY or WALLET_PRIVATE_KEY)
+            - NEVER ask the user for their private key - it's already configured in the environment
+            - Do NOT include private_key parameter in tool calls unless explicitly provided by the user
+            - Tools will automatically use the private key from environment variables when needed
+            
+            **Network Information:**
+            - Current network: {network}
+            - RPC URL: https://api.{network}.solana.com
+            
             Provide clear, informative responses based on the tool results.
             """
             max_steps: int = 5
-            available_tools: ToolManager = Field(default_factory=lambda: ToolManager(tools))
 
+        # Create ToolManager with the provided tools
+        tool_manager = ToolManager(tools)
+        
         agent = SolanaSpecialistAgent(
             llm=ChatBot(
                 
-            )
+            ),
+            available_tools=tool_manager
         )
         return agent
 
@@ -147,7 +166,7 @@ class SolanaToolkitDemo:
         )
 
         # Agent 3: DeFi Trader
-        swap_tools = [SolanaSwapTool()]
+        swap_tools = [SolanaSwapTool(), SolanaWalletInfoTool()]
         self.agents["trader"] = self.create_agent(
             "DeFi Trader",
             swap_tools,
@@ -220,7 +239,7 @@ class SolanaToolkitDemo:
         }
 
         print(f"\n Analyzing wallets: {self.demo_addresses[0][:16]}... and {self.demo_addresses[1][:16]}...")
-        user_query = f"What are the SOL balances and token holdings for these wallets: {self.demo_address} and {self.demo_addresses[1]}? Provide a comprehensive portfolio analysis."
+        user_query = f"What are the SOL balances and token holdings for these wallets: {self.demo_address} and {self.demo_addresses[1]}? Use rpc_url='{self.rpc_url}' when calling solana_wallet_info tool. Provide a comprehensive portfolio analysis."
 
         response = await self.run_agent_scenario(
             "wallet", "Wallet Balance & Portfolio Analysis", user_query
@@ -252,7 +271,40 @@ class SolanaToolkitDemo:
         print(
             f"\n Planning transfer of 0.5 SOL from {self.demo_address[:16]}... to {self.demo_addresses[1][:16]}..."
         )
-        user_query = f"Plan and verify a 0.5 SOL transfer from {self.demo_address} to {self.demo_addresses[1]}. Check if the recipient address is valid and estimate transaction fees."
+        
+        # Check if private key is configured
+        import os
+        has_private_key = bool(os.getenv("SOLANA_PRIVATE_KEY") or os.getenv("WALLET_PRIVATE_KEY"))
+        
+        if has_private_key:
+            user_query = f"""
+            Execute a 0.5 SOL transfer from {self.demo_address} to {self.demo_addresses[1]}.
+            
+            Please:
+            1. Use solana_wallet_info tool with rpc_url='{self.rpc_url}' to check the sender's balance
+            2. Validate the recipient address format
+            3. If balance is sufficient, execute the transfer using solana_transfer tool with:
+               - recipient: {self.demo_addresses[1]}
+               - amount: 0.5
+               - rpc_url: '{self.rpc_url}'
+            4. Provide transaction confirmation details
+            
+            Use rpc_url='{self.rpc_url}' for all tool calls.
+            """
+        else:
+            user_query = f"""
+            Plan and analyze a 0.5 SOL transfer from {self.demo_address} to {self.demo_addresses[1]}.
+            
+            **NOTE**: No private key configured. This is a PLANNING scenario only.
+            
+            Please:
+            1. Use solana_wallet_info tool with rpc_url='{self.rpc_url}' to check the sender's balance
+            2. Validate the recipient address format
+            3. Estimate transaction fees (typically ~0.000005 SOL)
+            4. Provide a transfer plan summary
+            
+            Do NOT call solana_transfer tool - private key is required for execution.
+            """
 
         response = await self.run_agent_scenario(
             "transfer", "Transfer Planning & Execution", user_query
@@ -288,31 +340,63 @@ class SolanaToolkitDemo:
         print(f"\n Analyzing DeFi swap opportunity: SOL → USDC")
         print(f" ℹ️  Note: Jupiter Aggregator Quote API has limited availability on Solana Devnet.")
         print(f"    This scenario provides educational analysis of swap mechanics.\n")
-        user_query = f"""
-        Please provide a comprehensive analysis of a potential SOL to USDC token swap:
+        # Check if private key is configured for actual swap execution
+        import os
+        has_private_key = bool(os.getenv("SOLANA_PRIVATE_KEY") or os.getenv("WALLET_PRIVATE_KEY"))
+        
+        if has_private_key:
+            user_query = f"""
+            Execute a SOL to USDC token swap:
+            
+            **IMPORTANT**: The private key is already configured in environment variables (SOLANA_PRIVATE_KEY).
+            You do NOT need to ask for the private key - the tools will automatically use it from the environment.
+            
+            Please:
+            1. Use solana_wallet_info tool with rpc_url='{self.rpc_url}' and address='{self.demo_address}' to check the wallet balance
+            2. If balance is sufficient (at least 0.5 SOL + fees), execute the swap using solana_swap tool with:
+               - input_token: "SOL" (use the string "SOL" for native SOL, not the mint address)
+               - output_token: "{usdc_mint}"
+               - amount: 0.5
+               - rpc_url: '{self.rpc_url}'
+               - Do NOT provide private_key parameter - it will be read from environment automatically
+            3. Provide transaction confirmation details
+            
+            **CRITICAL**: 
+            - For native SOL swaps, you MUST use input_token="SOL" (the string), NOT the mint address
+            - The private key is already available in environment variables - do NOT ask for it
+            - Use rpc_url='{self.rpc_url}' for all tool calls
+            """
+        else:
+            user_query = f"""
+            Please provide a comprehensive analysis of a potential SOL to USDC token swap:
 
-        1. Token Information:
-           - Source: SOL (mint: {sol_mint})
-           - Target: USDC (mint: {usdc_mint})
-           - Amount: 0.5 SOL
+            1. Token Information:
+               - Source: SOL (native SOL, use "SOL" string for input_token)
+               - Target: USDC (mint: {usdc_mint})
+               - Amount: 0.5 SOL
 
-        2. DeFi Swap Mechanics:
-           - Explain how token swaps work on Solana using DEX aggregators
-           - Describe slippage, price impact, and fees
-           - Discuss liquidity pools and routing
+            2. DeFi Swap Mechanics:
+               - Explain how token swaps work on Solana using DEX aggregators
+               - Describe slippage, price impact, and fees
+               - Discuss liquidity pools and routing
 
-        3. Execution Strategy:
-           - What are the steps to execute this swap on mainnet?
-           - How to minimize slippage?
-           - What are risk considerations?
+            3. Execution Strategy:
+               - What are the steps to execute this swap on mainnet?
+               - How to minimize slippage?
+               - What are risk considerations?
 
-        4. Tools & Services:
-           - Which DEX aggregators support this pair?
-           - Compare Raydium, Jupiter, and other venues
-           - Explain trade-offs between centralized and decentralized exchanges
+            4. Tools & Services:
+               - Which DEX aggregators support this pair?
+               - Compare Raydium, Jupiter, and other venues
+               - Explain trade-offs between centralized and decentralized exchanges
 
-        Note: Jupiter Quote API has limited support on Devnet, but this analysis applies to mainnet execution.
-        """
+            **NOTE**: No private key configured. This is an ANALYSIS scenario only.
+            Use solana_wallet_info tool to check wallet balance if needed.
+            Do NOT call solana_swap tool - private key is required for execution.
+            
+            Note: Jupiter Quote API has limited support on Devnet, but this analysis applies to mainnet execution.
+            When calling tools, always use rpc_url='{self.rpc_url}'.
+            """
 
         response = await self.run_agent_scenario(
             "trader", "Token Swap Analysis & Execution", user_query
@@ -361,6 +445,7 @@ class SolanaToolkitDemo:
 
         3. Security Analysis: What are the key security considerations when validating Solana addresses?
 
+        When calling solana_wallet_info tool, always use rpc_url='{self.rpc_url}'.
         Provide clear explanations for each analysis point.
         """
 
@@ -386,14 +471,14 @@ class SolanaToolkitDemo:
             if not self.agents:
                 self.setup_agents()
 
-            await self.scenario_1_wallet_analysis()
-            await asyncio.sleep(1)
+            # await self.scenario_1_wallet_analysis()
+            # await asyncio.sleep(1)
 
-            await self.scenario_2_transfer_planning_and_execution()
-            await asyncio.sleep(1)
+            # await self.scenario_2_transfer_planning_and_execution()
+            # await asyncio.sleep(1)
 
-            await self.scenario_3_address_validation_and_analysis()
-            await asyncio.sleep(1)
+            # await self.scenario_3_address_validation_and_analysis()
+            # await asyncio.sleep(1)
 
             await self.scenario_4_swap_analysis_and_execution()
 

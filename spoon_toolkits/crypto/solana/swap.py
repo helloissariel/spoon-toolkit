@@ -97,6 +97,17 @@ class SolanaSwapTool(BaseTool):
             amount = amount or self.amount
             slippage_bps = slippage_bps if slippage_bps is not None else self.slippage_bps
             priority_level = priority_level or self.priority_level
+            
+            # Log received parameters for debugging
+            logger.debug(f"SolanaSwapTool.execute called with: input_token={input_token}, output_token={output_token}, amount={amount}")
+            
+            # Validate required parameters early
+            if not input_token:
+                return ToolResult(error="input_token parameter is required. Please provide 'SOL' for native SOL or a token mint address.")
+            if not output_token:
+                return ToolResult(error="output_token parameter is required. Please provide 'SOL' for native SOL or a token mint address.")
+            if amount is None:
+                return ToolResult(error="amount parameter is required.")
 
             # Get wallet keypair with dynamic private key support
             keypair_result = get_wallet_key(require_private_key=True, private_key=private_key)
@@ -114,8 +125,13 @@ class SolanaSwapTool(BaseTool):
                 wallet_address=wallet_pubkey,
                 portfolio=portfolio,
             )
-            if resolved_input is None:
+            # For native SOL, NATIVE_SOL_ADDRESS is None, which needs special handling
+            if resolved_input is None and not is_native_sol(input_token):
                 return ToolResult(error="Could not find the input token in your wallet")
+            # If input is native SOL but resolved_input is None, use Wrapped SOL mint address for Jupiter
+            if resolved_input is None and is_native_sol(input_token):
+                # Jupiter API uses Wrapped SOL mint address for native SOL swaps
+                resolved_input = "So11111111111111111111111111111111111111112"
 
             resolved_output = await self._resolve_token_identifier(
                 output_token,
@@ -124,8 +140,13 @@ class SolanaSwapTool(BaseTool):
                 wallet_address=wallet_pubkey,
                 portfolio=portfolio,
             )
-            if resolved_output is None:
+            # For native SOL output, NATIVE_SOL_ADDRESS is None, which needs special handling
+            if resolved_output is None and not is_native_sol(output_token):
                 return ToolResult(error="Could not find the output token in your wallet")
+            # If output is native SOL but resolved_output is None, use Wrapped SOL mint address for Jupiter
+            if resolved_output is None and is_native_sol(output_token):
+                # Jupiter API uses Wrapped SOL mint address for native SOL swaps
+                resolved_output = "So11111111111111111111111111111111111111112"
 
             # Build quote context (validates inputs and fetches quote)
             quote_context = await self._build_quote_context(
@@ -191,7 +212,9 @@ class SolanaSwapTool(BaseTool):
     ) -> Dict[str, Any]:
         """Validate inputs, resolve decimals, and fetch a Jupiter quote."""
         if not input_token or not output_token:
-            return {"success": False, "error": "Both input_token and output_token are required"}
+            error_msg = f"Both input_token and output_token are required. Received: input_token={input_token}, output_token={output_token}"
+            logger.error(f"SolanaSwapTool validation error: {error_msg}")
+            return {"success": False, "error": error_msg}
 
         if amount is None:
             return {"success": False, "error": "Amount is required"}
@@ -250,8 +273,9 @@ class SolanaSwapTool(BaseTool):
 
     def _normalize_token_address(self, token: str) -> str:
         """Normalize token address for Jupiter API."""
-        if token.upper() == "SOL" or is_native_sol(token):
-            return NATIVE_SOL_ADDRESS
+        if token.upper() == "SOL" or is_native_sol(token) or token == NATIVE_SOL_ADDRESS:
+            # Jupiter API uses Wrapped SOL mint address for native SOL swaps
+            return "So11111111111111111111111111111111111111112"
         return token
 
     async def _get_token_decimals(self, rpc_url: str, mint_address: str) -> Optional[int]:
@@ -260,7 +284,9 @@ class SolanaSwapTool(BaseTool):
             from solana.rpc.async_api import AsyncClient
             from solders.pubkey import Pubkey
 
-            if mint_address == NATIVE_SOL_ADDRESS:
+            # Native SOL and Wrapped SOL both have 9 decimals
+            # Wrapped SOL mint: So11111111111111111111111111111111111111112
+            if mint_address == NATIVE_SOL_ADDRESS or mint_address == "So11111111111111111111111111111111111111112":
                 return 9
 
             async with AsyncClient(rpc_url) as client:
@@ -268,10 +294,26 @@ class SolanaSwapTool(BaseTool):
                 account_info = await client.get_account_info(mint_pubkey, encoding="jsonParsed")
 
                 if account_info.value and account_info.value.data:
-                    return account_info.value.data.parsed["info"]["decimals"]
+                    # Handle different response formats
+                    data = account_info.value.data
+                    if isinstance(data, dict):
+                        parsed = data.get("parsed", {})
+                        if isinstance(parsed, dict):
+                            info = parsed.get("info", {})
+                            if isinstance(info, dict) and "decimals" in info:
+                                return info["decimals"]
+                    elif hasattr(data, 'parsed'):
+                        parsed = data.parsed
+                        if isinstance(parsed, dict) and "info" in parsed:
+                            info = parsed["info"]
+                            if isinstance(info, dict) and "decimals" in info:
+                                return info["decimals"]
 
         except Exception as e:
-            logger.error(f"Error getting token decimals: {e}")
+            logger.error(f"Error getting token decimals for {mint_address}: {e}")
+            # For Wrapped SOL, return 9 as fallback
+            if mint_address == "So11111111111111111111111111111111111111112":
+                return 9
 
         return None
 
@@ -298,9 +340,17 @@ class SolanaSwapTool(BaseTool):
             if user_public_key:
                 params["userPublicKey"] = user_public_key
 
-            async with httpx.AsyncClient() as client:
-                response = await client.get(JUPITER_QUOTE_ENDPOINT, params=params, timeout=30)
-            quote_data = response.json()
+            # Log the request for debugging
+            logger.debug(f"Requesting Jupiter quote from {JUPITER_QUOTE_ENDPOINT} with params: {params}")
+            
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(30.0, connect=10.0),
+                limits=httpx.Limits(max_keepalive_connections=5, max_connections=10)
+            ) as client:
+                response = await client.get(JUPITER_QUOTE_ENDPOINT, params=params)
+                response.raise_for_status()  # Raise exception for bad status codes
+                quote_data = response.json()
+                
             if "error" in quote_data:
                 return {
                     "success": False,
@@ -310,8 +360,48 @@ class SolanaSwapTool(BaseTool):
                 "success": True,
                 "quote": quote_data
             }
+        except httpx.TimeoutException as e:
+            logger.error(f"Timeout getting Jupiter quote: {e}")
+            return {
+                "success": False,
+                "error": f"Timeout connecting to Jupiter API. Please check your network connection."
+            }
+        except httpx.ConnectError as e:
+            error_msg = str(e)
+            logger.error(f"Connection error getting Jupiter quote: {e}")
+            
+            # Check if it's a DNS resolution error
+            if "nodename nor servname provided" in error_msg or "Could not resolve host" in error_msg:
+                return {
+                    "success": False,
+                    "error": (
+                        f"DNS resolution failed for Jupiter API ({JUPITER_QUOTE_ENDPOINT}). "
+                        "This may be due to:\n"
+                        "1. Network connectivity issues\n"
+                        "2. DNS server problems\n"
+                        "3. Firewall/proxy restrictions (if you're in a restricted network environment, you may need a VPN or proxy)\n"
+                        "4. The Jupiter API endpoint may be temporarily unavailable\n\n"
+                        f"Error details: {error_msg}\n\n"
+                        "To resolve:\n"
+                        "- Check your internet connection\n"
+                        "- Try using a VPN if you're in a restricted network\n"
+                        "- Verify DNS settings: try 'nslookup quote-api.jup.ag' or 'ping quote-api.jup.ag'\n"
+                        "- Check if you need to configure proxy settings for httpx"
+                    )
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": f"Failed to connect to Jupiter API. Please check your network connection. Error: {error_msg}"
+                }
+        except httpx.HTTPStatusError as e:
+            logger.error(f"HTTP error getting Jupiter quote: {e.response.status_code} - {e.response.text}")
+            return {
+                "success": False,
+                "error": f"Jupiter API returned error {e.response.status_code}: {e.response.text[:200]}"
+            }
         except Exception as e:
-            logger.error(f"Error getting Jupiter quote: {e}")
+            logger.error(f"Error getting Jupiter quote: {e}", exc_info=True)
             return {
                 "success": False,
                 "error": f"Failed to get quote: {str(e)}"
