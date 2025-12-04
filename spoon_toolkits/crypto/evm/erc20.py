@@ -115,24 +115,27 @@ class EvmErc20TransferTool(BaseTool):
 
             amount_raw = int(float(amount) * (10 ** decimals))
 
-            tx = token.functions.transfer(Web3.to_checksum_address(to_address), amount_raw).build_transaction({
+            # Build transaction with gas estimation
+            tx_params = {
                 "from": signer_address,
                 "nonce": w3.eth.get_transaction_count(signer_address),
                 "chainId": w3.eth.chain_id,
-            })
-            # add gas/gasPrice
-            try:
-                gas_est = w3.eth.estimate_gas(tx)
-                tx["gas"] = int(gas_est * 1.2)
-            except Exception:
-                tx["gas"] = 120000
+            }
+            
+            # Add gas price if explicitly provided (for legacy transactions)
+            # Otherwise let web3.py handle it automatically (supports both legacy and EIP-1559)
             if gas_price_gwei is not None:
-                tx["gasPrice"] = w3.to_wei(gas_price_gwei, "gwei")
-            else:
+                tx_params["gasPrice"] = w3.to_wei(gas_price_gwei, "gwei")
+            
+            tx = token.functions.transfer(Web3.to_checksum_address(to_address), amount_raw).build_transaction(tx_params)
+            
+            # Estimate gas if not already set
+            if "gas" not in tx or tx["gas"] == 0:
                 try:
-                    tx["gasPrice"] = w3.eth.gas_price
+                    gas_est = w3.eth.estimate_gas(tx)
+                    tx["gas"] = int(gas_est * 1.2)
                 except Exception:
-                    pass
+                    tx["gas"] = 120000
 
             # Sign and send transaction using the signer
             signed_tx_hex = await signer.sign_transaction(tx, rpc_url)

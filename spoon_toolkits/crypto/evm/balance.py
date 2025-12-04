@@ -40,27 +40,55 @@ class EvmBalanceTool(BaseTool):
             if not rpc_url:
                 return ToolResult(error="Missing rpc_url and no EVM_PROVIDER_URL/RPC_URL set")
             if not address or not address.startswith("0x"):
-                return ToolResult(error="Missing or invalid address")
+                return ToolResult(error="Missing or invalid address: must start with '0x'")
+            
+            # Validate address length (must be 42 characters: '0x' + 40 hex chars)
+            if len(address) != 42:
+                return ToolResult(error=f"Invalid address length: {len(address)} characters. Ethereum addresses must be exactly 42 characters (0x + 40 hex digits). Address provided: {address}")
+            
+            # Validate hex characters
+            try:
+                int(address[2:], 16)
+            except ValueError:
+                return ToolResult(error=f"Invalid address format: contains non-hexadecimal characters. Address: {address}")
 
             try:
                 from web3 import Web3, HTTPProvider
             except Exception as e:
                 return ToolResult(error=f"web3 dependency not available: {str(e)}")
 
-            w3 = Web3(HTTPProvider(rpc_url))
-            if not w3.is_connected():
-                return ToolResult(error=f"Failed to connect to RPC: {rpc_url}")
+            try:
+                w3 = Web3(HTTPProvider(rpc_url, request_kwargs={'timeout': 10}))
+                if not w3.is_connected():
+                    return ToolResult(error=f"Failed to connect to RPC: {rpc_url}. Please check if the RPC endpoint is available or try an alternative RPC URL like https://ethereum-sepolia-rpc.publicnode.com")
+            except Exception as conn_error:
+                error_msg = str(conn_error)
+                return ToolResult(error=f"RPC connection error: {error_msg}. URL: {rpc_url}. Please verify the RPC endpoint is correct and accessible. Try alternative RPCs like https://ethereum-sepolia-rpc.publicnode.com")
 
+            # Validate and convert addresses to checksum format
+            try:
+                checksum_address = Web3.to_checksum_address(address)
+            except ValueError as e:
+                return ToolResult(error=f"Invalid Ethereum address format: {str(e)}. Address: {address}. Please verify the address is correct (42 characters, valid hex).")
+            
             if token_address:
-                token = w3.eth.contract(address=Web3.to_checksum_address(token_address), abi=ERC20_ABI)
+                # Validate token address
+                if len(token_address) != 42 or not token_address.startswith("0x"):
+                    return ToolResult(error=f"Invalid token address format: {token_address}. Must be 42 characters starting with '0x'")
+                try:
+                    checksum_token_address = Web3.to_checksum_address(token_address)
+                except ValueError as e:
+                    return ToolResult(error=f"Invalid token address format: {str(e)}. Token address: {token_address}")
+                
+                token = w3.eth.contract(address=checksum_token_address, abi=ERC20_ABI)
                 decimals = int(token.functions.decimals().call())
-                bal = token.functions.balanceOf(Web3.to_checksum_address(address)).call()
+                bal = token.functions.balanceOf(checksum_address).call()
                 value = float(bal) / (10 ** decimals)
-                return ToolResult(output={"address": address, "token": Web3.to_checksum_address(token_address), "balance": value})
+                return ToolResult(output={"address": checksum_address, "token": checksum_token_address, "balance": value})
             else:
-                wei = w3.eth.get_balance(Web3.to_checksum_address(address))
+                wei = w3.eth.get_balance(checksum_address)
                 eth = float(wei) / (10 ** 18)
-                return ToolResult(output={"address": address, "balance": eth})
+                return ToolResult(output={"address": checksum_address, "balance": eth})
         except Exception as e:
             logger.error(f"EvmBalanceTool error: {e}")
             return ToolResult(error=f"Get balance failed: {str(e)}")
