@@ -10,7 +10,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Any, Union
 
-from web3 import Web3
+from web3 import Web3, HTTPProvider
 from eth_account import Account as EthAccount
 
 from spoon_ai.tools.base import ToolResult
@@ -78,6 +78,15 @@ class LocalSigner(EvmSigner):
             signed = self._account.sign_transaction(tx_dict)
             return signed.raw_transaction.hex()
         except Exception as e:
+            # If signing fails due to gasPrice issue, try without it
+            # eth_account.sign_transaction doesn't support gasPrice parameter
+            if "gasPrice" in tx_dict and ("Unknown kwargs" in str(e) or "gasPrice" in str(e)):
+                try:
+                    tx_no_gas_price = {k: v for k, v in tx_dict.items() if k != "gasPrice"}
+                    signed = self._account.sign_transaction(tx_no_gas_price)
+                    return signed.raw_transaction.hex()
+                except Exception as e2:
+                    raise SignerError(f"Local signing failed: {str(e2)}")
             raise SignerError(f"Local signing failed: {str(e)}")
 
     async def get_address(self) -> str:
@@ -117,13 +126,89 @@ class TurnkeySigner(EvmSigner):
     async def sign_transaction(self, tx_dict: Dict[str, Any], rpc_url: str) -> str:
         """Sign transaction using Turnkey API."""
         try:
-            # Convert transaction dict to raw hex using web3
             from web3 import Web3
-            w3 = Web3()
-
-            # Create unsigned transaction and serialize to hex
-            unsigned_tx = w3.eth.account.sign_transaction(tx_dict, "")  # Empty key to get unsigned tx
-            raw_tx_hex = "0x" + unsigned_tx.raw_transaction.hex()
+            import rlp
+            
+            w3 = Web3(HTTPProvider(rpc_url)) if rpc_url else Web3()
+            
+            # Helper function to convert int to bytes
+            def int_to_bytes(value: int) -> bytes:
+                if value == 0:
+                    return b""
+                return value.to_bytes((value.bit_length() + 7) // 8, byteorder="big")
+            
+            # Determine transaction type and build unsigned transaction
+            # Check if it's EIP-1559 (has maxFeePerGas) or legacy (has gasPrice)
+            if "maxFeePerGas" in tx_dict or "maxPriorityFeePerGas" in tx_dict:
+                # EIP-1559 transaction (type 2)
+                chain_id = tx_dict.get("chainId", w3.eth.chain_id if rpc_url else 1)
+                nonce = tx_dict.get("nonce", 0)
+                max_priority_fee_per_gas = tx_dict.get("maxPriorityFeePerGas", 0)
+                max_fee_per_gas = tx_dict.get("maxFeePerGas", 0)
+                gas_limit = tx_dict.get("gas", tx_dict.get("gasLimit", 21000))
+                to_addr = tx_dict.get("to", "")
+                value = tx_dict.get("value", 0)
+                data = tx_dict.get("data", "0x")
+                
+                # Convert to bytes
+                to_bytes = bytes.fromhex(to_addr[2:]) if to_addr and to_addr != "0x" else b""
+                value_bytes = int_to_bytes(int(value))
+                data_bytes = bytes.fromhex(data[2:]) if data and data != "0x" else b""
+                
+                # Build EIP-1559 transaction fields
+                fields = [
+                    int_to_bytes(chain_id),
+                    int_to_bytes(nonce),
+                    int_to_bytes(max_priority_fee_per_gas),
+                    int_to_bytes(max_fee_per_gas),
+                    int_to_bytes(gas_limit),
+                    to_bytes,
+                    value_bytes,
+                    data_bytes,
+                    [],  # accessList empty
+                ]
+                
+                # RLP encode
+                encoded = rlp.encode(fields)
+                raw_tx_hex = "0x02" + encoded.hex()  # 0x02 prefix for EIP-1559
+                
+            else:
+                # Legacy transaction (type 0) - convert to EIP-1559 format for Turnkey
+                # Turnkey prefers EIP-1559 format, so we'll convert legacy tx to EIP-1559
+                chain_id = tx_dict.get("chainId", w3.eth.chain_id if rpc_url else 1)
+                nonce = tx_dict.get("nonce", 0)
+                gas_price = tx_dict.get("gasPrice", 0)
+                gas_limit = tx_dict.get("gas", tx_dict.get("gasLimit", 21000))
+                to_addr = tx_dict.get("to", "")
+                value = tx_dict.get("value", 0)
+                data = tx_dict.get("data", "0x")
+                
+                # Convert legacy gasPrice to EIP-1559 format
+                # Use gasPrice as both maxFeePerGas and maxPriorityFeePerGas
+                max_priority_fee_per_gas = gas_price
+                max_fee_per_gas = gas_price
+                
+                # Convert to bytes
+                to_bytes = bytes.fromhex(to_addr[2:]) if to_addr and to_addr != "0x" else b""
+                value_bytes = int_to_bytes(int(value))
+                data_bytes = bytes.fromhex(data[2:]) if data and data != "0x" else b""
+                
+                # Build EIP-1559 transaction fields (converted from legacy)
+                fields = [
+                    int_to_bytes(chain_id),
+                    int_to_bytes(nonce),
+                    int_to_bytes(max_priority_fee_per_gas),
+                    int_to_bytes(max_fee_per_gas),
+                    int_to_bytes(gas_limit),
+                    to_bytes,
+                    value_bytes,
+                    data_bytes,
+                    [],  # accessList empty
+                ]
+                
+                # RLP encode
+                encoded = rlp.encode(fields)
+                raw_tx_hex = "0x02" + encoded.hex()  # 0x02 prefix for EIP-1559
 
             # Sign via Turnkey
             client = self._get_turnkey_client()
@@ -200,6 +285,10 @@ class SignerManager:
             key = private_key or os.getenv("EVM_PRIVATE_KEY")
             if not key:
                 raise ValueError("Private key required for local signing")
+            # Ensure private key has 0x prefix
+            key = key.strip()
+            if not key.startswith("0x"):
+                key = "0x" + key
             return LocalSigner(key)
 
         elif signer_type == "turnkey":
