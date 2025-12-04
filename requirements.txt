@@ -3,6 +3,8 @@ aiohttp>=3.10.5
 fastmcp>=2.12.0
 pandas>=1.0.0
 httpx>=0.28.1
+beautifulsoup4>=4.12.3
+markdownify>=0.11.6
 pydantic>=2.10.4
 python-dotenv>=1.0.1
 typing-extensions>=4.12.2
@@ -20,8 +22,6 @@ neo-mamba>=3.0.1
 # Github GraphQL dependencies
 gql>=3.5.0
 
-# Additional dependencies used in the codebase
-neo3>=1.0.0
 
 # Development dependencies
 pytest>=7.0.0

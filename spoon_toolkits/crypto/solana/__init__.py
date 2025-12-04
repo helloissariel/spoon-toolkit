@@ -13,6 +13,7 @@ from .wallet import (
 
 # Blockchain service tools and helpers
 from .service import (
+    SolanaService,
     create_request_headers,
     detect_private_keys_from_string,
     detect_pubkeys_from_string,
@@ -61,6 +62,8 @@ __all__ = [
     "SolanaSwapTool",
     # Wallet tools
     "SolanaWalletInfoTool",
+    # Service class
+    "SolanaService",
     # Service tools & helpers
     "create_request_headers",
     "detect_private_keys_from_string",

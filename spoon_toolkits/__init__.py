@@ -139,6 +139,7 @@ from .memory.mem0_tools import (
     UpdateMemoryTool,
     DeleteMemoryTool,
 )
+from .web import WebScraperTool
 
 
 
@@ -292,4 +293,7 @@ __all__ = [
     "GetAllMemoryTool",
     "UpdateMemoryTool",
     "DeleteMemoryTool",
+
+    # Web tools
+    "WebScraperTool",
 ]
