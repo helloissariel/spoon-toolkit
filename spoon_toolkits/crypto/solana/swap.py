@@ -51,7 +51,7 @@ class SolanaSwapTool(BaseTool):
                 "description": "Output token mint address (or 'SOL' for native SOL)"
             },
             "amount": {
-                "type": ["string", "number"],
+                "type": "number",
                 "description": "Amount to swap (in input token units)"
             },
             "slippage_bps": {

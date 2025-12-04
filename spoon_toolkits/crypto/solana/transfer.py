@@ -37,7 +37,7 @@ class SolanaTransferTool(BaseTool):
                 "description": "Recipient Solana address"
             },
             "amount": {
-                "type": ["string", "number"],
+                "type": "number",
                 "description": "Amount to transfer (in human-readable units)"
             },
             "token_address": {

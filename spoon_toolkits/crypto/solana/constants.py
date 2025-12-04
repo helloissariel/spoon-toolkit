@@ -3,13 +3,17 @@
 # Service and Cache Configuration
 SOLANA_SERVICE_NAME = "chain_solana"
 SOLANA_WALLET_DATA_CACHE_KEY = "solana/walletData"
+BIRDEYE_API_BASE_URL = "https://public-api.birdeye.so"
+
+# Network Units
+LAMPORTS_PER_SOL = 1_000_000_000
 
 # Token Program IDs
 TOKEN_PROGRAM_ID = None
 TOKEN_2022_PROGRAM_ID = None
 ASSOCIATED_TOKEN_PROGRAM_ID = None
 
-# System Program ID
+## System Program ID
 SYSTEM_PROGRAM_ID = None
 
 # Metadata Program ID (Metaplex)
@@ -59,3 +63,7 @@ JUPITER_PRIORITY_LEVELS = {
     "high": 1000,
     "veryHigh": 4_000_000,
 }
+
+JUPITER_API_BASE_URL = "https://quote-api.jup.ag/v6"
+JUPITER_QUOTE_ENDPOINT = f"{JUPITER_API_BASE_URL}/quote"
+JUPITER_SWAP_ENDPOINT = f"{JUPITER_API_BASE_URL}/swap"
