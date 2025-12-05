@@ -4,80 +4,51 @@ Spoon Toolkits is a comprehensive collection of blockchain and cryptocurrency to
 
 ## 📁 Module Overview
 
-### 🔒 GoPlusLabs - Security Detection Tools
-**Path**: `gopluslabs/`
-
-The GoPlusLabs module provides comprehensive blockchain security detection services, including:
-
-- **Token Security Detection** (`token_security.py`)
-  - Detect security risks in token contracts
-  - Support for Ethereum and Solana networks
-  - Detect honeypots, fake tokens, blacklisted addresses, and other risks
-
-- **Malicious Address Detection** (`malicious_address.py`)
-  - Identify known malicious addresses
-  - Provide address risk assessment
-
-- **NFT Security Detection** (`nft_security.py`)
-  - NFT contract security analysis
-  - Detect NFT-related risks
-
-- **DApp Security Detection** (`dapp_security.py`)
-  - Decentralized application security assessment
-  - Smart contract risk analysis
-
-- **Phishing Site Detection** (`phishing_site.py`)
-  - Identify phishing websites
-  - Provide website security assessment
-
-- **Rug Pull Detection** (`rug_pull_detection.py`)
-  - Detect potential rug pull risks
-  - Project credibility assessment
-
-- **Approval Security Detection** (`approval_security.py`)
-  - Detect token approval risks
-  - Analyze approval security
-
-- **Supported Chains** (`supported_chains.py`)
-  - Get list of supported blockchain networks
-  - Chain ID and name mapping
-
 ### 💰 Crypto - Cryptocurrency Data Tools
+
 **Path**: `crypto/`
 
 Provides comprehensive cryptocurrency market data and analysis tools:
 
 - **Price Data** (`price_data.py`)
+
   - Real-time token price retrieval
   - Support for DEXs like Uniswap and Raydium
   - K-line data and 24-hour statistics
 
 - **Price Alerts** (`price_alerts.py`)
+
   - Price threshold monitoring
   - Liquidity range checking
   - Abnormal price movement detection
 
 - **Lending Rates** (`lending_rates.py`)
+
   - DeFi lending protocol rate monitoring
   - Yield comparison analysis
 
 - **LST Arbitrage** (`lst_arbitrage.py`)
+
   - Liquid staking token arbitrage opportunities
   - Cross-protocol yield analysis
 
 - **Blockchain Monitoring** (`blockchain_monitor.py`)
+
   - Blockchain network status monitoring
   - Transaction pool monitoring
 
 - **Token Holder Analysis** (`token_holders.py`)
+
   - Token holder distribution analysis
   - Whale address tracking
 
 - **Trading History** (`trading_history.py`)
+
   - Transaction record queries
   - Historical data analysis
 
 - **Wallet Analysis** (`wallet_analysis.py`)
+
   - Wallet behavior analysis
   - Portfolio analysis
 
@@ -85,35 +56,166 @@ Provides comprehensive cryptocurrency market data and analysis tools:
   - Uniswap liquidity pool analysis
   - LP yield calculation
 
+### EVM Blockchain Tools (`crypto/evm/`)
+
+Comprehensive EVM-compatible blockchain interaction tools:
+
+- **Balance Query** (`balance.py`)
+
+  - Query native token (ETH, MATIC, etc.) balances
+  - Query ERC20 token balances
+  - Multi-chain support (Ethereum, Polygon, Arbitrum, Base, etc.)
+
+- **Native Token Transfer** (`transfer.py`)
+
+  - Transfer native tokens (ETH, MATIC, etc.) on EVM chains
+  - Support for local private key signing
+  - Support for Turnkey secure signing
+  - Gas price optimization
+
+- **ERC20 Token Transfer** (`erc20.py`)
+
+  - Transfer ERC20 tokens on EVM chains
+  - Automatic token approval handling
+  - Support for local and Turnkey signing
+
+- **Token Swap** (`swap.py`)
+
+  - Swap tokens on the same EVM chain via Bebop aggregator
+  - Automatic token approval handling
+  - Slippage protection
+  - Support for local and Turnkey signing
+
+- **Swap Quote** (`quote.py`)
+
+  - Get swap quotes without executing transactions
+  - Compare quotes from multiple aggregators (Bebop, LiFi)
+  - Price impact analysis
+  - Route optimization
+
+- **Cross-Chain Bridge** (`bridge.py`)
+
+  - Cross-chain token bridging via LiFi aggregator
+  - Support for multiple EVM chains
+  - Bridge route optimization
+
+- **Signer Management** (`signers.py`)
+  - Unified signing interface for EVM transactions
+  - Local private key signing via web3.py
+  - Turnkey API integration for enhanced security
+  - Automatic signer selection based on configuration
+
+### Solana Blockchain Tools (`crypto/solana/`)
+
+Complete Solana blockchain interaction toolkit:
+
+- **Wallet Information** (`wallet.py`)
+
+  - Query SOL balance and token holdings
+  - Token account information
+  - Portfolio overview with price data
+
+- **SOL Transfer** (`transfer.py`)
+
+  - Transfer native SOL tokens
+  - Support for devnet, testnet, and mainnet
+  - Transaction fee estimation
+
+- **Token Swap** (`swap.py`)
+
+  - Swap tokens on Solana via Jupiter aggregator
+  - Support for native SOL and SPL tokens
+  - Route optimization and slippage protection
+  - Priority fee configuration
+
+- **Blockchain Service** (`service.py`)
+
+  - Comprehensive Solana RPC interaction
+  - Wallet data caching and refresh
+  - Token balance queries
+  - Transaction error parsing
+  - Address validation utilities
+
+- **Keypair Utilities** (`keypairUtils.py`)
+
+  - Wallet keypair generation and management
+  - Private key handling
+  - Public key derivation
+
+- **Environment Configuration** (`environment.py`)
+  - Solana network configuration
+  - RPC URL management
+  - Environment variable handling
+
+### Memory Management Tools (`memory/`)
+
+Long-term memory management powered by Mem0:
+
+- **Add Memory** (`mem0_tools.py` - `AddMemoryTool`)
+
+  - Store text or conversation snippets
+  - Support for structured messages
+  - Metadata and filtering support
+
+- **Search Memory** (`mem0_tools.py` - `SearchMemoryTool`)
+
+  - Natural language memory search
+  - Semantic similarity search
+  - Configurable result limits
+
+- **Get All Memories** (`mem0_tools.py` - `GetAllMemoryTool`)
+
+  - Retrieve all stored memories for a user/agent
+  - Filtering and pagination support
+  - Metadata-based queries
+
+- **Update Memory** (`mem0_tools.py` - `UpdateMemoryTool`)
+
+  - Update existing memory entries
+  - Modify content and metadata
+  - Selective memory updates
+
+- **Delete Memory** (`mem0_tools.py` - `DeleteMemoryTool`)
+  - Remove specific memory entries
+  - Bulk deletion support
+  - Filter-based deletion
+
 ### 📊 Crypto PowerData - Advanced Cryptocurrency Data & Indicators Tools
+
 **Path**: `crypto_powerdata/`
 
 Provides advanced cryptocurrency market data and technical analysis tools:
 
 - **CEX Data with Indicators** (`CryptoPowerDataCEXTool`)
+
   - Fetch candlestick data from 100+ centralized exchanges (e.g., Binance, Coinbase, Kraken)
   - Apply comprehensive technical indicators (e.g., EMA, MACD, RSI)
 
 - **DEX Data with Indicators** (`CryptoPowerDataDEXTool`)
+
   - Fetch candlestick data from decentralized exchanges via OKX DEX API
   - Apply comprehensive technical indicators for on-chain data
   - **Note**: To use crypto powerdata DEX query functionality, you need to obtain OKX API credentials from [OKX Web3 Developer Portal](https://web3.okx.com/build/dev-portal)
 
 - **Real-time Price Retrieval** (`CryptoPowerDataPriceTool`)
+
   - Get real-time cryptocurrency prices from both CEX and DEX sources
 
 - **Indicators Listing** (`CryptoPowerDataIndicatorsTool`)
+
   - List all available technical indicators and their configurations
 
 - **MCP Server Support**
   - Can run as a Multi-Chain Protocol (MCP) server for enhanced data streaming and integration
 
 ### 🌐 Neo - Neo Blockchain Tools
+
 **Path**: `neo/`
 
 Specialized toolkit for Neo blockchain:
 
 - **Complete Neo N3 API Toolkit** (`tool_collection.py`)
+
   - Address information queries
   - Asset information retrieval
   - Block and transaction queries
@@ -122,6 +224,7 @@ Specialized toolkit for Neo blockchain:
   - NEP-11/NEP-17 token operations
 
 - **GitHub Analysis** (`github_analysis.py`)
+
   - Neo ecosystem project GitHub analysis
   - Code quality assessment
 
@@ -130,6 +233,7 @@ Specialized toolkit for Neo blockchain:
   - Governance participation analysis
 
 ### 🌐 ThirdWeb - Web3 Development Tools
+
 **Path**: `third_web/`
 
 Blockchain data tools based on ThirdWeb Insight API:
@@ -142,11 +246,13 @@ Blockchain data tools based on ThirdWeb Insight API:
 - **Wallet Transaction History** - Wallet address transaction records
 
 ### 🔍 Chainbase - Blockchain Data API Tools
+
 **Path**: `chainbase/`
 
 Comprehensive blockchain data query tools based on Chainbase API:
 
 #### Chainbase Tools (`chainbase_tools.py`)
+
 - **GetLatestBlockNumberTool** - Get the latest block height of blockchain network
 - **GetBlockByNumberTool** - Get the block by number of blockchain network
 - **GetTransactionByHashTool** - Get the transaction by hash of blockchain network
@@ -158,46 +264,55 @@ Comprehensive blockchain data query tools based on Chainbase API:
 - **GetTokenMetadataTool** - Get the metadata of a specified token
 
 #### Balance Module (`balance.py`)
+
 - **Account Token Balances** - Retrieve all ERC20 token balances for an address
 - **Account NFT Holdings** - Get the list of NFTs owned by an account
 - **Native Token Balance** - Query native token balance for an address
 
 #### Basic Blockchain Module (`basic.py`)
+
 - **Block Data Queries** - Get latest block number and block details
 - **Transaction Data** - Retrieve transaction details by hash or block position
 - **Account Transactions** - Get transaction history for an address
 - **Contract Function Calls** - Execute read-only contract function calls
 
 #### Token API Module (`token_api.py`)
+
 - **Token Metadata** - Retrieve token contract metadata
 - **Token Holders Analysis** - Get token holder distribution and top holders
 - **Token Price Data** - Current and historical token price information
 - **Token Transfer History** - Track ERC20 token transfers
 
 ### 💾 Storage - Decentralized Storage Tools
+
 **Path**: `storage/`
 
 Provides multiple decentralized storage solutions:
 
 #### Base Storage Tools (`base_storge_tool.py`)
+
 - S3-compatible storage interface
 - Support for bucket operations, object upload/download
 - Multipart upload support
 - Pre-signed URL generation
 
 #### AIOZ Storage (`aioz/`)
+
 - AIOZ network storage services
 - Decentralized content distribution
 
 #### 4EVERLAND Storage (`foureverland/`)
+
 - 4EVERLAND decentralized storage
 - IPFS-compatible interface
 
 #### OORT Storage (`oort/`)
+
 - OORT decentralized cloud storage
 - Enterprise-grade storage solutions
 
 ### 🔄 Token Execute - Token Execution Tools
+
 **Path**: `token_execute/`
 
 Token operation and execution tools:
@@ -219,9 +334,6 @@ pip install -r requirements.txt
 Create a `.env` file in your project root or set these environment variables:
 
 ```bash
-# GoPlusLabs API
-export GOPLUS_API_KEY="your_api_key"
-
 # ThirdWeb
 export THIRDWEB_CLIENT_ID="your_client_id"
 
@@ -255,6 +367,22 @@ export OORT_SECRET_KEY="your_secret_key"
 
 # GitHub API Configuration
 export GITHUB_TOKEN="your_github_personal_access_token"
+
+# EVM Blockchain Configuration
+export EVM_PRIVATE_KEY="0x..."  # Private key for local signing (optional)
+export TURNKEY_API_PUBLIC_KEY="your_turnkey_public_key"  # Turnkey API credentials (optional)
+export TURNKEY_API_PRIVATE_KEY="your_turnkey_private_key"
+export TURNKEY_ORG_ID="your_turnkey_org_id"
+export TURNKEY_SIGN_WITH="your_turnkey_signer_id"
+export TURNKEY_ADDRESS="0x..."  # Turnkey signer address
+
+# Solana Blockchain Configuration
+export SOLANA_PRIVATE_KEY="your_base58_private_key"  # Solana wallet private key (Base58 encoded)
+export SOLANA_PUBLIC_KEY="your_public_key"  # Optional: Solana wallet public key
+
+# Mem0 Memory Configuration
+export MEM0_API_KEY="your_mem0_api_key"  # Mem0 API key for long-term memory
+export MEM0_PROJECT_ID="your_mem0_project_id"  # Optional: Mem0 project ID
 ```
 
 ### 🔑 API Setup Guides
@@ -365,25 +493,112 @@ dex_price = await price_tool.execute(
 print(f"DEX Token Price: {dex_price}")
 ```
 
+#### 7. EVM Blockchain Tools Usage
+
+```python
+from spoon_toolkits.crypto.evm import EvmBalanceTool, EvmTransferTool, EvmSwapQuoteTool
+
+# Get native token balance
+balance_tool = EvmBalanceTool()
+balance_result = await balance_tool.execute(
+    rpc_url="https://eth-mainnet.g.alchemy.com/v2/your_key",
+    address="0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+)
+print(f"ETH Balance: {balance_result}")
+
+# Get ERC20 token balance
+token_balance = await balance_tool.execute(
+    rpc_url="https://eth-mainnet.g.alchemy.com/v2/your_key",
+    address="0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045",
+    token_address="0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"  # USDC
+)
+print(f"USDC Balance: {token_balance}")
+
+# Get swap quote
+quote_tool = EvmSwapQuoteTool()
+quote_result = await quote_tool.execute(
+    chain_id=1,  # Ethereum mainnet
+    from_token="0x0000000000000000000000000000000000000000",  # Native ETH
+    to_token="0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",  # USDC
+    amount="1.0",
+    aggregator="both"  # Compare Bebop and LiFi
+)
+print(f"Swap Quote: {quote_result}")
+```
+
+#### 8. Solana Blockchain Tools Usage
+
+```python
+from spoon_toolkits.crypto.solana import SolanaWalletInfoTool, SolanaTransferTool, SolanaSwapTool
+
+# Get wallet information
+wallet_tool = SolanaWalletInfoTool()
+wallet_info = await wallet_tool.execute(
+    rpc_url="https://api.mainnet-beta.solana.com",
+    address="BJyWLDo4xYDs2bp2dK2BcMFBJuRxnUBcJkNqjxgg81hR",
+    include_tokens=True
+)
+print(f"Wallet Balance: {wallet_info}")
+
+# Transfer SOL
+transfer_tool = SolanaTransferTool()
+transfer_result = await transfer_tool.execute(
+    rpc_url="https://api.devnet.solana.com",
+    recipient="GMkCtcMmLTQ3jwxExRvSqCE5u4ypFYNa6TxVMZ9smuud",
+    amount=0.5
+)
+print(f"Transfer Result: {transfer_result}")
+```
+
+#### 9. Memory Management Tools Usage
+
+```python
+from spoon_toolkits.memory import AddMemoryTool, SearchMemoryTool, GetAllMemoryTool
+
+# Add memory
+add_tool = AddMemoryTool()
+add_result = await add_tool.execute(
+    content="User prefers dark mode UI",
+    user_id="user_123",
+    metadata={"source": "preference_survey"}
+)
+print(f"Memory Added: {add_result}")
+
+# Search memories
+search_tool = SearchMemoryTool()
+search_result = await search_tool.execute(
+    query="What are the user's UI preferences?",
+    user_id="user_123",
+    limit=5
+)
+print(f"Search Results: {search_result}")
+
+# Get all memories
+get_all_tool = GetAllMemoryTool()
+all_memories = await get_all_tool.execute(
+    user_id="user_123",
+    limit=50
+)
+print(f"All Memories: {all_memories}")
+```
+
 ## 🔧 Tool Features
 
-### 🛡️ Security
-- Comprehensive security detection coverage
-- Multi-dimensional risk assessment
-- Real-time threat detection
-
 ### 📊 Data Richness
+
 - Multi-chain data support
 - Real-time price and market data
 - Historical data analysis
 
 ### 🌐 Multi-chain Support
+
 - Ethereum ecosystem
 - Solana ecosystem
 - Neo blockchain
 - Other EVM-compatible chains
 
 ### 🔄 Easy Integration
+
 - Unified tool interface
 - Asynchronous operation support
 - Detailed error handling
