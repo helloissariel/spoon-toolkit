@@ -189,19 +189,33 @@ class UpdateMemoryTool(Mem0ToolBase):
         "properties": {
             "memory_id": {"type": "string"},
             "text": {"type": "string"},
-            "metadata": {"type": "object"}
+            "metadata": {"type": "object"},
+            "user_id": {"type": "string"}
         },
         "required": ["memory_id"]
     }
 
-    async def execute(self, memory_id: str, text: str = None, metadata: dict = None) -> ToolResult:
+    async def execute(self, memory_id: str, text: str = None, metadata: dict = None, **kwargs) -> ToolResult:
         if not text and not metadata:
             return ToolResult(error="Provide text or metadata to update.")
             
         client = self._get_client()
         if not client: return ToolResult(error="Client not ready")
 
-        return await self._safe_run(client.update, memory_id=memory_id, text=text, metadata=metadata)
+        # Build params but exclude metadata to avoid conflict with explicit parameter
+        params = self._build_params(metadata=None, **kwargs)
+        # Merge explicit metadata with params metadata if both exist
+        if metadata:
+            if "metadata" in params:
+                params["metadata"] = {**params["metadata"], **metadata}
+            else:
+                params["metadata"] = metadata
+        
+        # MemoryClient.update() only accepts memory_id, text, metadata
+        # Remove unsupported parameters like user_id, collection, filters
+        update_params = {k: v for k, v in params.items() if k in ("metadata",)}
+        
+        return await self._safe_run(client.update, memory_id=memory_id, text=text, **update_params)
 
 
 class DeleteMemoryTool(Mem0ToolBase):
@@ -209,14 +223,19 @@ class DeleteMemoryTool(Mem0ToolBase):
     description: str = "Delete a stored memory by ID."
     parameters: dict = {
         "type": "object", 
-        "properties": {"memory_id": {"type": "string"}}, 
+        "properties": {
+            "memory_id": {"type": "string"},
+            "user_id": {"type": "string"}
+        }, 
         "required": ["memory_id"]
     }
 
-    async def execute(self, memory_id: str) -> ToolResult:
+    async def execute(self, memory_id: str, **kwargs) -> ToolResult:
         client = self._get_client()
         if not client: return ToolResult(error="Client not ready")
         
+        # MemoryClient.delete() only accepts memory_id, not user_id or other params
+        # So we don't pass any additional params to delete()
         return await self._safe_run(client.delete, memory_id=memory_id)
 
 __all__ = [
