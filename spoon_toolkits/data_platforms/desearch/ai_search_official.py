@@ -30,8 +30,12 @@ async def search_ai_data(query: str, platforms: str = "web,reddit,wikipedia,yout
 async def _search_ai_data_impl(query: str, platforms: str = "web,reddit,wikipedia,youtube", limit: int = 10) -> Dict[str, Any]:
     """Implementation of search_ai_data function using official SDK"""
     try:
+        import os
         from desearch_py import Desearch
-        from env import DESEARCH_API_KEY
+        
+        DESEARCH_API_KEY = os.getenv('DESEARCH_API_KEY')
+        if not DESEARCH_API_KEY:
+            return {"error": "DESEARCH_API_KEY environment variable not set"}
 
         # Ensure minimum limit
         limit = max(limit, 10)
@@ -111,8 +115,12 @@ async def search_social_media(query: str, platform: str = "twitter", limit: int 
 async def _search_social_media_impl(query: str, platform: str = "twitter", limit: int = 10) -> Dict[str, Any]:
     """Implementation of search_social_media function using official SDK"""
     try:
+        import os
         from desearch_py import Desearch
-        from env import DESEARCH_API_KEY
+        
+        DESEARCH_API_KEY = os.getenv('DESEARCH_API_KEY')
+        if not DESEARCH_API_KEY:
+            return {"error": "DESEARCH_API_KEY environment variable not set"}
 
         # Ensure minimum limit
         limit = max(limit, 10)
@@ -167,8 +175,12 @@ async def search_academic(query: str, platform: str = "arxiv", limit: int = 10) 
 async def _search_academic_impl(query: str, platform: str = "arxiv", limit: int = 10) -> Dict[str, Any]:
     """Implementation of search_academic function using official SDK"""
     try:
+        import os
         from desearch_py import Desearch
-        from env import DESEARCH_API_KEY
+        
+        DESEARCH_API_KEY = os.getenv('DESEARCH_API_KEY')
+        if not DESEARCH_API_KEY:
+            return {"error": "DESEARCH_API_KEY environment variable not set"}
 
         # Ensure minimum limit
         limit = max(limit, 10)

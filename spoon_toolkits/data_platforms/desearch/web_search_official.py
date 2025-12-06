@@ -30,8 +30,12 @@ async def search_web(query: str, num_results: int = 10, start: int = 0) -> Dict[
 async def _search_web_impl(query: str, num_results: int = 10, start: int = 0) -> Dict[str, Any]:
     """Implementation of search_web function using official SDK"""
     try:
+        import os
         from desearch_py import Desearch
-        from env import DESEARCH_API_KEY
+        
+        DESEARCH_API_KEY = os.getenv('DESEARCH_API_KEY')
+        if not DESEARCH_API_KEY:
+            return {"error": "DESEARCH_API_KEY environment variable not set"}
 
         # Initialize Desearch client
         desearch = Desearch(api_key=DESEARCH_API_KEY)
@@ -84,8 +88,12 @@ async def search_twitter_links(query: str, limit: int = 10) -> Dict[str, Any]:
 async def _search_twitter_links_impl(query: str, limit: int = 10) -> Dict[str, Any]:
     """Implementation of search_twitter_links function using official SDK"""
     try:
+        import os
         from desearch_py import Desearch
-        from env import DESEARCH_API_KEY
+        
+        DESEARCH_API_KEY = os.getenv('DESEARCH_API_KEY')
+        if not DESEARCH_API_KEY:
+            return {"error": "DESEARCH_API_KEY environment variable not set"}
 
         # Ensure minimum limit
         limit = max(limit, 10)
@@ -141,8 +149,12 @@ async def search_twitter_posts(query: str, limit: int = 10, sort: str = "Top") -
 async def _search_twitter_posts_impl(query: str, limit: int = 10, sort: str = "Top") -> Dict[str, Any]:
     """Implementation of search_twitter_posts function using official SDK"""
     try:
+        import os
         from desearch_py import Desearch
-        from env import DESEARCH_API_KEY
+        
+        DESEARCH_API_KEY = os.getenv('DESEARCH_API_KEY')
+        if not DESEARCH_API_KEY:
+            return {"error": "DESEARCH_API_KEY environment variable not set"}
 
         # Ensure minimum limit
         limit = max(limit, 10)

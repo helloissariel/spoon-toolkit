@@ -34,14 +34,14 @@ except ImportError:
         async def execute(self, *args, **kwargs) -> Any:
             raise NotImplementedError("Subclasses must implement this method")
 
-# Import Desearch functions
+# Import Desearch implementation functions (not MCP-wrapped)
 try:
-    from .ai_search_official import search_ai_data, search_academic
-    from .web_search_official import search_web, search_twitter_links, search_twitter_posts
+    from .ai_search_official import _search_ai_data_impl, _search_academic_impl
+    from .web_search_official import _search_web_impl, _search_twitter_links_impl, _search_twitter_posts_impl
 except ImportError:
     # Fallback for direct import
-    from ai_search_official import search_ai_data, search_academic
-    from web_search_official import search_web, search_twitter_links, search_twitter_posts
+    from ai_search_official import _search_ai_data_impl, _search_academic_impl
+    from web_search_official import _search_web_impl, _search_twitter_links_impl, _search_twitter_posts_impl
 
 logger = logging.getLogger(__name__)
 
@@ -87,13 +87,10 @@ class DesearchAISearchTool(BaseTool):
     async def execute(self, query: str, platforms: str = "web,reddit", limit: int = 10) -> Dict[str, Any]:
         """Execute AI search across specified platforms"""
         try:
-            # Convert platforms string to list
-            platform_list = [p.strip() for p in platforms.split(',')]
-
-            # Call the search function
-            result = await search_ai_data(
+            # Call the search implementation function directly
+            result = await _search_ai_data_impl(
                 query=query,
-                platforms=platform_list,
+                platforms=platforms,  # Pass as string, implementation handles it
                 limit=limit
             )
 
@@ -148,7 +145,7 @@ class DesearchWebSearchTool(BaseTool):
     async def execute(self, query: str, num_results: int = 10) -> Dict[str, Any]:
         """Execute web search"""
         try:
-            result = await search_web(query=query, num_results=num_results)
+            result = await _search_web_impl(query=query, num_results=num_results)
 
             return {
                 "success": True,
@@ -207,7 +204,7 @@ class DesearchAcademicSearchTool(BaseTool):
     async def execute(self, query: str, platform: str = "arxiv", limit: int = 10) -> Dict[str, Any]:
         """Execute academic search"""
         try:
-            result = await search_academic(query=query, platform=platform, limit=limit)
+            result = await _search_academic_impl(query=query, platform=platform, limit=limit)
 
             return {
                 "success": True,
@@ -267,9 +264,9 @@ class DesearchTwitterSearchTool(BaseTool):
         """Execute Twitter search"""
         try:
             if search_type == "links":
-                result = await search_twitter_links(query=query, limit=limit)
+                result = await _search_twitter_links_impl(query=query, limit=limit)
             else:
-                result = await search_twitter_posts(query=query, limit=limit)
+                result = await _search_twitter_posts_impl(query=query, limit=limit)
 
             return {
                 "success": True,
