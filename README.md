@@ -1,8 +1,43 @@
 # Spoon Toolkits
 
-Spoon Toolkits is a comprehensive collection of blockchain and cryptocurrency tools that provides various specialized functional modules for SpoonAI. These tools cover multiple domains including security detection, price data, storage services, blockchain interaction, and more.
+Spoon Toolkits is a comprehensive collection of blockchain and cryptocurrency tools that provides various specialized functional modules for SpoonAI. These tools cover multiple domains including security detection, price data, storage services, blockchain interaction, audio/voice AI, and more.
 
 ## 📁 Module Overview
+
+### 🎙️ Audio - AI Voice & Audio Tools
+
+**Path**: `audio/`
+
+AI-powered audio tools for speech synthesis, transcription, voice cloning, and localization:
+
+- **Text-to-Speech** (`ElevenLabsTextToSpeechTool`)
+
+  - Convert text to high-quality speech in 70+ languages
+  - Multiple voice options (5000+ voices)
+  - Streaming with character-level timestamps
+
+- **Speech-to-Text** (`ElevenLabsSpeechToTextTool`)
+
+  - Transcribe audio/video files to text
+  - 99 language support with auto-detection
+  - Industry-leading accuracy
+
+- **Voice Design** (`ElevenLabsVoiceDesignTool`)
+
+  - Generate custom voices from text descriptions
+  - Create unique voices for agents and applications
+  - Preview and save designed voices
+
+- **Voice Cloning** (`ElevenLabsInstantVoiceCloneTool`)
+
+  - Clone voices from 1-3 audio samples
+  - Instant voice creation
+  - Background noise removal
+
+- **Dubbing** (`ElevenLabsDubbingCreateTool`)
+  - Localize audio/video content to different languages
+  - Automatic dubbing with voice matching
+  - Download dubbed audio files
 
 ### 💰 Crypto - Cryptocurrency Data Tools
 
@@ -368,6 +403,9 @@ export OORT_SECRET_KEY="your_secret_key"
 # GitHub API Configuration
 export GITHUB_TOKEN="your_github_personal_access_token"
 
+# ElevenLabs Audio API (for TTS, STT, voice cloning, dubbing)
+export ELEVENLABS_API_KEY="your_elevenlabs_api_key"  # Get at https://elevenlabs.io/app/settings/api-keys
+
 # EVM Blockchain Configuration
 export EVM_PRIVATE_KEY="0x..."  # Private key for local signing (optional)
 export TURNKEY_API_PUBLIC_KEY="your_turnkey_public_key"  # Turnkey API credentials (optional)
@@ -580,6 +618,52 @@ all_memories = await get_all_tool.execute(
     limit=50
 )
 print(f"All Memories: {all_memories}")
+```
+
+#### 10. ElevenLabs Audio Tools Usage
+
+```python
+from spoon_toolkits.audio import (
+    ElevenLabsTextToSpeechTool,
+    ElevenLabsSpeechToTextTool,
+    ElevenLabsVoiceDesignTool,
+    ElevenLabsInstantVoiceCloneTool,
+)
+
+# Text-to-Speech
+tts_tool = ElevenLabsTextToSpeechTool()
+tts_result = await tts_tool.execute(
+    text="Hello, this is a demonstration of AI voice synthesis.",
+    voice_id="JBFqnCBsd6RMkjVDRZzb",  # George voice
+    model_id="eleven_multilingual_v2",
+    save_to_file="output.mp3"
+)
+print(f"Generated audio: {tts_result.output['audio_size_bytes']} bytes")
+
+# Speech-to-Text
+stt_tool = ElevenLabsSpeechToTextTool()
+stt_result = await stt_tool.execute(
+    file_path="recording.mp3",
+    language="en"  # Optional, auto-detected if not specified
+)
+print(f"Transcription: {stt_result.output['text']}")
+
+# Voice Design
+design_tool = ElevenLabsVoiceDesignTool()
+design_result = await design_tool.execute(
+    voice_description="A warm elderly British man with a gentle storytelling tone",
+    auto_generate_text=True
+)
+print(f"Generated {design_result.output['preview_count']} voice previews")
+
+# Voice Cloning
+clone_tool = ElevenLabsInstantVoiceCloneTool()
+clone_result = await clone_tool.execute(
+    name="My Custom Voice",
+    files=["sample1.mp3", "sample2.mp3"],
+    description="Cloned from my recordings"
+)
+print(f"Cloned voice ID: {clone_result.output['voice_id']}")
 ```
 
 ## 🔧 Tool Features
