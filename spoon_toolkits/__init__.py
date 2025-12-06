@@ -141,6 +141,18 @@ from .memory.mem0_tools import (
 )
 from .web import WebScraperTool
 
+# Audio tools (ElevenLabs)
+from .audio import (
+    ElevenLabsTextToSpeechTool,
+    ElevenLabsTextToSpeechStreamTool,
+    ElevenLabsSpeechToTextTool,
+    ElevenLabsVoiceDesignTool,
+    ElevenLabsCreateVoiceFromPreviewTool,
+    ElevenLabsInstantVoiceCloneTool,
+    ElevenLabsDubbingCreateTool,
+    ElevenLabsDubbingStatusTool,
+    ElevenLabsDubbingAudioTool,
+)
 
 
 __all__ = [
@@ -296,4 +308,15 @@ __all__ = [
 
     # Web tools
     "WebScraperTool",
+
+    # Audio tools (ElevenLabs)
+    "ElevenLabsTextToSpeechTool",
+    "ElevenLabsTextToSpeechStreamTool",
+    "ElevenLabsSpeechToTextTool",
+    "ElevenLabsVoiceDesignTool",
+    "ElevenLabsCreateVoiceFromPreviewTool",
+    "ElevenLabsInstantVoiceCloneTool",
+    "ElevenLabsDubbingCreateTool",
+    "ElevenLabsDubbingStatusTool",
+    "ElevenLabsDubbingAudioTool",
 ]

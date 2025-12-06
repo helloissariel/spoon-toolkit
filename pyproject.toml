@@ -57,6 +57,9 @@ dependencies = [
     # Github GraphQL dependencies
     "gql>=3.5.0",
 
+    # Audio/Voice AI SDKs
+    "elevenlabs>=1.0.0",
+
     # Note: spoon-ai-sdk is required but not listed here to avoid circular dependency
     # Install spoon-ai-sdk first: pip install spoon-ai-sdk
     # Then install spoon-toolkits: pip install spoon-toolkits
