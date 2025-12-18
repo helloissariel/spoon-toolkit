@@ -2,15 +2,15 @@
 
 import pytest
 import asyncio
-from spoon_toolkits.deribit.env import DeribitConfig
-from spoon_toolkits.deribit.jsonrpc_client import DeribitJsonRpcClient
-from spoon_toolkits.deribit.auth import DeribitAuth
+from spoon_toolkits.data_platforms.deribit.env import DeribitConfig
+from spoon_toolkits.data_platforms.deribit.jsonrpc_client import DeribitJsonRpcClient
+from spoon_toolkits.data_platforms.deribit.auth import DeribitAuth
 
 
 @pytest.mark.integration
 class TestDeribitJsonRpcClientIntegration:
     """Integration tests for JSON-RPC client"""
-    
+
     @pytest.mark.asyncio
     async def test_public_api_connection(self):
         """Test connection to Deribit public API"""
@@ -23,7 +23,7 @@ class TestDeribitJsonRpcClientIntegration:
             assert isinstance(result, list)
             if result:
                 assert "instrument_name" in result[0]
-    
+
     @pytest.mark.asyncio
     async def test_get_order_book(self):
         """Test getting order book"""
@@ -43,32 +43,32 @@ class TestDeribitJsonRpcClientIntegration:
 )
 class TestDeribitAuthIntegration:
     """Integration tests for authentication (requires API credentials)"""
-    
+
     @pytest.mark.asyncio
     async def test_authentication(self):
         """Test OAuth2 authentication"""
         auth = DeribitAuth()
-        
+
         result = await auth.authenticate()
-        
+
         assert result is not None
         assert "access_token" in result
         assert auth.get_access_token() is not None
         assert auth.is_token_valid() is True
-    
+
     @pytest.mark.asyncio
     async def test_token_refresh(self):
         """Test token refresh"""
         auth = DeribitAuth()
-        
+
         # First authenticate
         await auth.authenticate()
         original_token = auth.get_access_token()
-        
+
         # Refresh token
         await auth.refresh_access_token()
         new_token = auth.get_access_token()
-        
+
         assert new_token is not None
         # Token might be the same or different depending on implementation
         assert auth.is_token_valid() is True
@@ -81,28 +81,28 @@ class TestDeribitAuthIntegration:
 )
 class TestAccountToolsIntegration:
     """Integration tests for account tools (requires API credentials)"""
-    
+
     @pytest.mark.asyncio
     async def test_get_account_summary(self):
         """Test getting account summary"""
-        from spoon_toolkits.deribit.account import GetAccountSummaryTool
-        
+        from spoon_toolkits.data_platforms.deribit.account import GetAccountSummaryTool
+
         tool = GetAccountSummaryTool()
         result = await tool.execute(currency="BTC")
-        
+
         assert result.get("error") is None
         output = result.get("output")
         assert output is not None
         assert "balance" in output or "equity" in output
-    
+
     @pytest.mark.asyncio
     async def test_get_positions(self):
         """Test getting positions"""
-        from spoon_toolkits.deribit.account import GetPositionsTool
-        
+        from spoon_toolkits.data_platforms.deribit.account import GetPositionsTool
+
         tool = GetPositionsTool()
         result = await tool.execute(currency="BTC")
-        
+
         assert result.get("error") is None
         output = result.get("output")
         assert output is not None

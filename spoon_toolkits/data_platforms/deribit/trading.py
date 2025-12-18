@@ -728,8 +728,8 @@ class PlaceSellOrderTool(DeribitBaseTool):
                 price_decimal = Decimal(str(price))
                 tick_decimal = Decimal(str(tick_size))
                 
-                # Calculate the normalized price (always round down for buy orders)
-                normalized_price = (price_decimal / tick_decimal).quantize(Decimal('1'), rounding=ROUND_DOWN) * tick_decimal
+                # Calculate the normalized price (round UP for sell orders to preserve minimum acceptable price)
+                normalized_price = (price_decimal / tick_decimal).quantize(Decimal('1'), rounding=ROUND_UP) * tick_decimal
                 
                 # Determine precision from tick_size
                 tick_size_str = str(tick_size)
