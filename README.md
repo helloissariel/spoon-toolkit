@@ -361,7 +361,7 @@ Token operation and execution tools:
 
 ```bash
 # Install dependencies
-pip install -r requirements.txt
+pip install -e .
 ```
 
 ### Environment Variable Configuration
